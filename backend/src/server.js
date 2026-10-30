@@ -7,6 +7,7 @@ const { Server } = require('socket.io');
 require('dotenv').config();
 
 const { pool } = require('./config/db');
+const { runMigration } = require('./db/migrate');
 const { initializeSocketIO } = require('./sockets/socketHandler');
 const errorHandler = require('./middleware/errorHandler');
 
@@ -79,7 +80,7 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`
 =====================================================
   🚚 HAMHA LOGISTICS BACKEND SERVICE
@@ -92,6 +93,14 @@ server.listen(PORT, () => {
   🗺️  Socket.io: Live Mapbox Location Rooms Enabled
 =====================================================
   `);
+
+  // Auto-validate and synchronize Neon PostgreSQL database schema on startup
+  try {
+    await runMigration();
+    console.log('📦 Neon PostgreSQL Database schema validated and ready.');
+  } catch (err) {
+    console.warn('⚠️ Non-fatal migration check warning on startup:', err.message);
+  }
 });
 
 module.exports = { app, server };

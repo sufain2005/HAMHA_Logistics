@@ -153,6 +153,19 @@ CREATE TABLE IF NOT EXISTS orders (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Ensure orders columns exist if table was previously created
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'INR';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) DEFAULT 'UPI / Corporate Net Banking';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS package_description TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS pickup_contact_name VARCHAR(120);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS pickup_contact_phone VARCHAR(30);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS dropoff_contact_name VARCHAR(120);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS dropoff_contact_phone VARCHAR(30);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS assigned_at TIMESTAMPTZ;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS picked_up_at TIMESTAMPTZ;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ;
+
 -- 6. Transit Checkpoints Table (Consignment Milestone tracking)
 CREATE TABLE IF NOT EXISTS transit_checkpoints (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

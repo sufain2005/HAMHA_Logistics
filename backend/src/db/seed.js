@@ -1,43 +1,21 @@
 const bcrypt = require('bcryptjs');
 const { pool } = require('../config/db');
+const { runMigration } = require('./migrate');
 
 async function seedDatabase() {
   console.log('🌱 Seeding HAMHA Logistics Neon database with verified Indian freight fleets, tariffs, and consignments...');
   const client = await pool.connect();
 
   try {
+    // 1. Automatically run full schema migration first (ensures PostGIS, tables, columns, indexes exist)
+    await runMigration(client);
+
     await client.query('BEGIN');
 
     const salt = await bcrypt.genSalt(10);
     const adminPass = await bcrypt.hash('Admin@123456', salt);
     const customerPass = await bcrypt.hash('Customer@123456', salt);
     const driverPass = await bcrypt.hash('Driver@123456', salt);
-
-    // Safeguard: Ensure users and vehicles table columns & constraints exist before insertion
-    await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS company_name VARCHAR(255);');
-    await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS gstin VARCHAR(50);');
-    await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS govt_id_type VARCHAR(50);');
-    await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS govt_id_number VARCHAR(100);');
-    await client.query('ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES users(id) ON DELETE SET NULL;');
-    await client.query('ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS tire_config VARCHAR(50);');
-    await client.query('ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS rc_photo_url TEXT;');
-    await client.query('ALTER TABLE vehicles ALTER COLUMN driver_id DROP NOT NULL;');
-    await client.query(`
-      DO $$ BEGIN
-        BEGIN
-          ALTER TABLE vehicles ALTER COLUMN type TYPE VARCHAR(50) USING type::VARCHAR;
-        EXCEPTION
-          WHEN OTHERS THEN NULL;
-        END;
-        IF NOT EXISTS (
-          SELECT 1 FROM pg_constraint WHERE conname = 'vehicles_driver_id_key'
-        ) THEN
-          ALTER TABLE vehicles ADD CONSTRAINT vehicles_driver_id_key UNIQUE (driver_id);
-        END IF;
-      EXCEPTION
-        WHEN OTHERS THEN NULL;
-      END $$;
-    `);
 
     // 1. Seed Users (Fleet Owner/Admin, Customer, Driver)
     const adminRes = await client.query(
