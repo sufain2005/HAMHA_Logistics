@@ -21,13 +21,13 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
 
   // Pickup details (Default San Francisco coordinates for demo)
   final _pickupAddressController = TextEditingController(text: '750 Brannan St, San Francisco, CA');
-  double _pickupLon = -122.4022;
-  double _pickupLat = 37.7758;
+  final double _pickupLon = -122.4022;
+  final double _pickupLat = 37.7758;
 
   // Dropoff details
   final _dropoffAddressController = TextEditingController(text: '201 3rd St, San Francisco, CA');
-  double _dropoffLon = -122.4005;
-  double _dropoffLat = 37.7858;
+  final double _dropoffLon = -122.4005;
+  final double _dropoffLat = 37.7858;
 
   final _contactNameController = TextEditingController(text: 'Receiving Dock Manager');
   final _contactPhoneController = TextEditingController(text: '+14155552671');
@@ -40,7 +40,6 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
   @override
   void initState() {
     super.initState();
-    // Auto-calculate initial quote on screen entry
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _calculateQuote();
     });
@@ -113,7 +112,6 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
         ),
       );
 
-      // Navigate directly to live Mapbox tracking screen
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -131,145 +129,148 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Theme(
-      data: HamhaTheme.lightFormTheme,
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF4F6F8),
-        appBar: AppBar(
-          backgroundColor: HamhaTheme.deepBlack,
-          title: const Text('Create New Shipment'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-            onPressed: () => Navigator.pop(context),
-          ),
+    return Scaffold(
+      backgroundColor: HamhaTheme.warmCream,
+      appBar: AppBar(
+        backgroundColor: HamhaTheme.crispWhite,
+        title: const Text('Create New Shipment'),
+        elevation: 0.5,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: HamhaTheme.deepBlack),
+          onPressed: () => Navigator.pop(context),
         ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (_errorMessage != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: HamhaTheme.crimsonRed.withAlpha(20),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: HamhaTheme.crimsonRed),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 680),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_errorMessage != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: HamhaTheme.crimsonTint,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: HamhaTheme.crimsonRed),
+                      ),
+                      child: Text(_errorMessage!, style: const TextStyle(color: HamhaTheme.crimsonDark, fontSize: 13)),
                     ),
-                    child: Text(_errorMessage!, style: const TextStyle(color: HamhaTheme.crimsonDark, fontSize: 13)),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // SECTION 1: Cargo Specifications
+                  _buildSectionCard(
+                    title: '1. Package & Cargo Details',
+                    icon: Icons.inventory_2_outlined,
+                    children: [
+                      DropdownButtonFormField<String>(
+                        value: _selectedCargo,
+                        decoration: const InputDecoration(labelText: 'Cargo Category'),
+                        items: const [
+                          DropdownMenuItem(value: 'Industrial Equipment', child: Text('Industrial Equipment')),
+                          DropdownMenuItem(value: 'Medical Supplies', child: Text('Medical Supplies (Fragile)')),
+                          DropdownMenuItem(value: 'Electronics & Hardware', child: Text('Electronics & Hardware')),
+                          DropdownMenuItem(value: 'General Commercial Freight', child: Text('General Commercial Freight')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => _selectedCargo = val);
+                            _calculateQuote();
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _weightController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Total Weight (kg)',
+                          suffixText: 'KG',
+                        ),
+                        validator: (val) => val == null || double.tryParse(val) == null ? 'Enter valid weight' : null,
+                        onChanged: (_) => _calculateQuote(),
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _descriptionController,
+                        decoration: const InputDecoration(
+                          labelText: 'Package Description / Notes for Driver',
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
+
+                  // SECTION 2: Pickup Point
+                  _buildSectionCard(
+                    title: '2. Origin (Pick-up Point)',
+                    icon: Icons.trip_origin,
+                    iconColor: HamhaTheme.crimsonRed,
+                    children: [
+                      TextFormField(
+                        controller: _pickupAddressController,
+                        decoration: const InputDecoration(
+                          labelText: 'Pick-up Street Address',
+                          prefixIcon: Icon(Icons.location_on, color: HamhaTheme.crimsonRed),
+                        ),
+                        validator: (val) => val == null || val.trim().isEmpty ? 'Address required' : null,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // SECTION 3: Drop-off Point
+                  _buildSectionCard(
+                    title: '3. Destination (Drop-off Point)',
+                    icon: Icons.flag_outlined,
+                    iconColor: HamhaTheme.deepBlack,
+                    children: [
+                      TextFormField(
+                        controller: _dropoffAddressController,
+                        decoration: const InputDecoration(
+                          labelText: 'Destination Street Address',
+                          prefixIcon: Icon(Icons.pin_drop, color: HamhaTheme.deepBlack),
+                        ),
+                        validator: (val) => val == null || val.trim().isEmpty ? 'Address required' : null,
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _contactNameController,
+                              decoration: const InputDecoration(labelText: 'Receiver Name'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _contactPhoneController,
+                              keyboardType: TextInputType.phone,
+                              decoration: const InputDecoration(labelText: 'Receiver Phone'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // SECTION 4: Cost Calculator Component
+                  CostCalculatorWidget(
+                    quote: _currentQuote,
+                    isLoading: _isCalculating,
+                    onCalculate: _calculateQuote,
+                    onProceed: _isSubmitting ? null : _handleProceed,
+                  ),
+                  const SizedBox(height: 30),
                 ],
-
-                // SECTION 1: Cargo Specifications
-                _buildSectionCard(
-                  title: '1. Package & Cargo Details',
-                  icon: Icons.inventory_2_outlined,
-                  children: [
-                    DropdownButtonFormField<String>(
-                      value: _selectedCargo,
-                      decoration: const InputDecoration(labelText: 'Cargo Category'),
-                      items: const [
-                        DropdownMenuItem(value: 'Industrial Equipment', child: Text('Industrial Equipment')),
-                        DropdownMenuItem(value: 'Medical Supplies', child: Text('Medical Supplies (Fragile)')),
-                        DropdownMenuItem(value: 'Electronics & Hardware', child: Text('Electronics & Hardware')),
-                        DropdownMenuItem(value: 'General Commercial Freight', child: Text('General Commercial Freight')),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) {
-                          setState(() => _selectedCargo = val);
-                          _calculateQuote();
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _weightController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(
-                        labelText: 'Total Weight (kg)',
-                        suffixText: 'KG',
-                      ),
-                      validator: (val) => val == null || double.tryParse(val) == null ? 'Enter valid weight' : null,
-                      onChanged: (_) => _calculateQuote(),
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _descriptionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Package Description / Notes for Driver',
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // SECTION 2: Pickup Point
-                _buildSectionCard(
-                  title: '2. Origin (Pick-up Point)',
-                  icon: Icons.trip_origin,
-                  iconColor: HamhaTheme.crimsonRed,
-                  children: [
-                    TextFormField(
-                      controller: _pickupAddressController,
-                      decoration: const InputDecoration(
-                        labelText: 'Pick-up Street Address',
-                        prefixIcon: Icon(Icons.location_on, color: HamhaTheme.crimsonRed),
-                      ),
-                      validator: (val) => val == null || val.trim().isEmpty ? 'Address required' : null,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // SECTION 3: Drop-off Point
-                _buildSectionCard(
-                  title: '3. Destination (Drop-off Point)',
-                  icon: Icons.flag_outlined,
-                  iconColor: HamhaTheme.crimsonDark,
-                  children: [
-                    TextFormField(
-                      controller: _dropoffAddressController,
-                      decoration: const InputDecoration(
-                        labelText: 'Destination Street Address',
-                        prefixIcon: Icon(Icons.pin_drop, color: HamhaTheme.crimsonDark),
-                      ),
-                      validator: (val) => val == null || val.trim().isEmpty ? 'Address required' : null,
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _contactNameController,
-                            decoration: const InputDecoration(labelText: 'Receiver Name'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _contactPhoneController,
-                            keyboardType: TextInputType.phone,
-                            decoration: const InputDecoration(labelText: 'Receiver Phone'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // SECTION 4: Cost Calculator Component
-                CostCalculatorWidget(
-                  quote: _currentQuote,
-                  isLoading: _isCalculating,
-                  onCalculate: _calculateQuote,
-                  onProceed: _isSubmitting ? null : _handleProceed,
-                ),
-                const SizedBox(height: 30),
-              ],
+              ),
             ),
           ),
         ),
@@ -280,18 +281,18 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
   Widget _buildSectionCard({
     required String title,
     required IconData icon,
-    Color iconColor = HamhaTheme.textDark,
+    Color iconColor = HamhaTheme.deepBlack,
     required List<Widget> children,
   }) {
     return Card(
       color: HamhaTheme.crispWhite,
       elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: HamhaTheme.borderGrey.withAlpha(120)),
+        borderRadius: BorderRadius.circular(18),
+        side: const BorderSide(color: HamhaTheme.borderSubtle, width: 1.2),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(18.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -302,14 +303,14 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
                 Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: HamhaTheme.textDark,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: HamhaTheme.deepBlack,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             ...children,
           ],
         ),
@@ -317,4 +318,3 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
     );
   }
 }
-

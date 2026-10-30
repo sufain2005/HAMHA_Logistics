@@ -15,7 +15,7 @@ class HamhaCustomerApp extends StatelessWidget {
     return MaterialApp(
       title: 'HAMHA Logistics - Customer',
       debugShowCheckedModeBanner: false,
-      theme: HamhaTheme.darkTheme,
+      theme: HamhaTheme.lightTheme,
       home: const SplashScreen(),
     );
   }

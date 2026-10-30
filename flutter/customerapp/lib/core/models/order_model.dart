@@ -1,3 +1,29 @@
+class TransitCheckpoint {
+  final String location;
+  final String district;
+  final String state;
+  final String timestamp;
+  final bool isCompleted;
+
+  TransitCheckpoint({
+    required this.location,
+    required this.district,
+    required this.state,
+    required this.timestamp,
+    required this.isCompleted,
+  });
+
+  factory TransitCheckpoint.fromJson(Map<String, dynamic> json) {
+    return TransitCheckpoint(
+      location: json['location'] ?? '',
+      district: json['district'] ?? '',
+      state: json['state'] ?? '',
+      timestamp: json['timestamp'] ?? '',
+      isCompleted: json['isCompleted'] ?? false,
+    );
+  }
+}
+
 class OrderModel {
   final String id;
   final String orderCode;
@@ -12,6 +38,7 @@ class OrderModel {
   final double dropoffLon;
   final double dropoffLat;
   final double fareAmount;
+  final String currency;
   final double distanceKm;
   final int? estimatedDurationMin;
   final String paymentStatus;
@@ -23,6 +50,12 @@ class OrderModel {
   final double? driverLon;
   final double? driverLat;
   final double? driverHeading;
+  final double? driverSpeedKmh;
+  final String? currentDistrict;
+  final String? currentState;
+  final String? currentLandmark;
+  final String? expectedReachTime;
+  final List<TransitCheckpoint> checkpoints;
   final DateTime createdAt;
 
   OrderModel({
@@ -39,6 +72,7 @@ class OrderModel {
     required this.dropoffLon,
     required this.dropoffLat,
     required this.fareAmount,
+    this.currency = 'INR',
     required this.distanceKm,
     this.estimatedDurationMin,
     required this.paymentStatus,
@@ -50,10 +84,23 @@ class OrderModel {
     this.driverLon,
     this.driverLat,
     this.driverHeading,
+    this.driverSpeedKmh,
+    this.currentDistrict,
+    this.currentState,
+    this.currentLandmark,
+    this.expectedReachTime,
+    this.checkpoints = const [],
     required this.createdAt,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
+    List<TransitCheckpoint> parsedCheckpoints = [];
+    if (json['checkpoints'] != null && json['checkpoints'] is List) {
+      parsedCheckpoints = (json['checkpoints'] as List)
+          .map((c) => TransitCheckpoint.fromJson(c))
+          .toList();
+    }
+
     return OrderModel(
       id: json['id'] ?? '',
       orderCode: json['order_code'] ?? '',
@@ -62,12 +109,13 @@ class OrderModel {
       weightKg: (json['weight_kg'] as num?)?.toDouble() ?? 0.0,
       packageDescription: json['package_description'],
       pickupAddress: json['pickup_address'] ?? '',
-      pickupLon: (json['pickup_lon'] as num?)?.toDouble() ?? -122.4022,
-      pickupLat: (json['pickup_lat'] as num?)?.toDouble() ?? 37.7758,
+      pickupLon: (json['pickup_lon'] as num?)?.toDouble() ?? 73.8567,
+      pickupLat: (json['pickup_lat'] as num?)?.toDouble() ?? 18.5204,
       dropoffAddress: json['dropoff_address'] ?? '',
-      dropoffLon: (json['dropoff_lon'] as num?)?.toDouble() ?? -122.4005,
-      dropoffLat: (json['dropoff_lat'] as num?)?.toDouble() ?? 37.7858,
+      dropoffLon: (json['dropoff_lon'] as num?)?.toDouble() ?? 77.5946,
+      dropoffLat: (json['dropoff_lat'] as num?)?.toDouble() ?? 12.9716,
       fareAmount: (json['fare_amount'] as num?)?.toDouble() ?? 0.0,
+      currency: json['currency'] ?? 'INR',
       distanceKm: (json['distance_km'] as num?)?.toDouble() ?? 0.0,
       estimatedDurationMin: json['estimated_duration_min'],
       paymentStatus: json['payment_status'] ?? 'pending',
@@ -79,8 +127,13 @@ class OrderModel {
       driverLon: (json['driver_lon'] as num?)?.toDouble(),
       driverLat: (json['driver_lat'] as num?)?.toDouble(),
       driverHeading: (json['driver_heading'] as num?)?.toDouble(),
+      driverSpeedKmh: (json['driver_speed_kmh'] as num?)?.toDouble(),
+      currentDistrict: json['current_district'],
+      currentState: json['current_state'],
+      currentLandmark: json['current_landmark'],
+      expectedReachTime: json['expected_reach_time'],
+      checkpoints: parsedCheckpoints,
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
     );
   }
 }
-

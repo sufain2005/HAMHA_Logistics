@@ -12,21 +12,20 @@ class QuoteModel {
     required this.weightKg,
     required this.distanceKm,
     required this.estimatedDurationMin,
-    required this.currency,
+    this.currency = 'INR',
     required this.totalFare,
     required this.breakdown,
   });
 
   factory QuoteModel.fromJson(Map<String, dynamic> json) {
     return QuoteModel(
-      cargoType: json['cargoType'] ?? 'Standard Package',
+      cargoType: json['cargoType'] ?? 'Standard Cargo',
       weightKg: (json['weightKg'] as num?)?.toDouble() ?? 0.0,
       distanceKm: (json['distanceKm'] as num?)?.toDouble() ?? 0.0,
       estimatedDurationMin: json['estimatedDurationMin'] ?? 0,
-      currency: json['currency'] ?? 'USD',
-      totalFare: json['totalFare']?.toString() ?? '0.00',
+      currency: json['currency'] ?? 'INR',
+      totalFare: json['totalFare']?.toString() ?? '0',
       breakdown: json['breakdown'] ?? {},
     );
   }
 }
-

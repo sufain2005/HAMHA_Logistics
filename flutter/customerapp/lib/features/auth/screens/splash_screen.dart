@@ -22,7 +22,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     super.initState();
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1200),
     );
 
     _scaleAnimation = CurvedAnimation(
@@ -37,7 +37,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     _animController.forward();
 
-    Future.delayed(const Duration(milliseconds: 2200), () {
+    Future.delayed(const Duration(milliseconds: 2000), () {
       if (!mounted) return;
       if (ApiClient().isAuthenticated) {
         Navigator.pushReplacement(
@@ -62,31 +62,31 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: HamhaTheme.deepBlack,
+      backgroundColor: HamhaTheme.warmCream,
       body: Stack(
         children: [
-          // Background ambient red glow
+          // Subtle warm decorative background rings
           Positioned(
-            top: -80,
-            right: -80,
-            child: Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: HamhaTheme.crimsonRed.withAlpha(35),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -60,
-            left: -60,
+            top: -60,
+            right: -60,
             child: Container(
               width: 220,
               height: 220,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: HamhaTheme.crimsonDark.withAlpha(25),
+                color: HamhaTheme.crimsonRed.withAlpha(12),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -50,
+            left: -50,
+            child: Container(
+              width: 180,
+              height: 180,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: HamhaTheme.deepBlack.withAlpha(10),
               ),
             ),
           ),
@@ -95,20 +95,35 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               opacity: _fadeAnimation,
               child: ScaleTransition(
                 scale: _scaleAnimation,
-                child: const Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    HamhaLogo(size: 110),
-                    SizedBox(height: 48),
-                    SizedBox(
-                      width: 32,
-                      height: 32,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(HamhaTheme.crimsonRed),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 48),
+                  decoration: BoxDecoration(
+                    color: HamhaTheme.crispWhite,
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(14),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
                       ),
-                    ),
-                  ],
+                    ],
+                    border: Border.all(color: HamhaTheme.borderSubtle, width: 1.2),
+                  ),
+                  child: const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      HamhaLogo(size: 100),
+                      SizedBox(height: 36),
+                      SizedBox(
+                        width: 30,
+                        height: 30,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(HamhaTheme.crimsonRed),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -118,4 +133,3 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     );
   }
 }
-

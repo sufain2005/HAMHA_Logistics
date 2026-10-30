@@ -5,6 +5,11 @@ class UserModel {
   final String phone;
   final String role;
   final bool isVerified;
+  final String companyName;
+  final String gstin;
+  final String primaryAddress;
+  final String upiId;
+  final bool whatsappAlerts;
 
   UserModel({
     required this.id,
@@ -13,6 +18,11 @@ class UserModel {
     required this.phone,
     required this.role,
     this.isVerified = false,
+    this.companyName = '',
+    this.gstin = '',
+    this.primaryAddress = '',
+    this.upiId = '',
+    this.whatsappAlerts = true,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -23,6 +33,11 @@ class UserModel {
       phone: json['phone'] ?? '',
       role: json['role'] ?? 'customer',
       isVerified: json['is_verified'] ?? false,
+      companyName: json['company_name'] ?? '',
+      gstin: json['gstin'] ?? '',
+      primaryAddress: json['primary_address'] ?? '',
+      upiId: json['upi_id'] ?? '',
+      whatsappAlerts: json['whatsapp_alerts'] ?? true,
     );
   }
 
@@ -33,6 +48,10 @@ class UserModel {
     'phone': phone,
     'role': role,
     'is_verified': isVerified,
+    'company_name': companyName,
+    'gstin': gstin,
+    'primary_address': primaryAddress,
+    'upi_id': upiId,
+    'whatsapp_alerts': whatsappAlerts,
   };
 }
-

@@ -20,13 +20,13 @@ class CostCalculatorWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       color: HamhaTheme.crispWhite,
-      elevation: 3,
+      elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: HamhaTheme.borderGrey.withAlpha(150)),
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: HamhaTheme.borderSubtle, width: 1.2),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(22.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -35,24 +35,24 @@ class CostCalculatorWidget extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: HamhaTheme.crimsonRed.withAlpha(20),
-                    shape: BoxShape.circle,
+                    color: HamhaTheme.deepBlack,
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.calculate_outlined, color: HamhaTheme.crimsonRed, size: 22),
+                  child: const Icon(Icons.calculate_outlined, color: HamhaTheme.crispWhite, size: 20),
                 ),
                 const SizedBox(width: 12),
                 const Text(
                   'HAMHA Cost Calculator',
                   style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: HamhaTheme.textDark,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    color: HamhaTheme.deepBlack,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            const Divider(color: HamhaTheme.borderGrey, height: 1),
+            const Divider(color: HamhaTheme.borderSubtle, height: 1),
             const SizedBox(height: 16),
 
             if (isLoading)
@@ -74,17 +74,18 @@ class CostCalculatorWidget extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
                       decoration: BoxDecoration(
-                        color: HamhaTheme.lightGrey,
-                        borderRadius: BorderRadius.circular(10),
+                        color: HamhaTheme.warmCream,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: HamhaTheme.borderSubtle),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text('DISTANCE', style: TextStyle(color: HamhaTheme.textMuted, fontSize: 11, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 4),
-                          Text('${quote!.distanceKm} km', style: const TextStyle(color: HamhaTheme.textDark, fontWeight: FontWeight.bold, fontSize: 15)),
+                          Text('${quote!.distanceKm} km', style: const TextStyle(color: HamhaTheme.deepBlack, fontWeight: FontWeight.w900, fontSize: 16)),
                         ],
                       ),
                     ),
@@ -92,17 +93,18 @@ class CostCalculatorWidget extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
                       decoration: BoxDecoration(
-                        color: HamhaTheme.lightGrey,
-                        borderRadius: BorderRadius.circular(10),
+                        color: HamhaTheme.warmCream,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: HamhaTheme.borderSubtle),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text('EST. DURATION', style: TextStyle(color: HamhaTheme.textMuted, fontSize: 11, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 4),
-                          Text('${quote!.estimatedDurationMin} mins', style: const TextStyle(color: HamhaTheme.textDark, fontWeight: FontWeight.bold, fontSize: 15)),
+                          Text('${quote!.estimatedDurationMin} mins', style: const TextStyle(color: HamhaTheme.deepBlack, fontWeight: FontWeight.w900, fontSize: 16)),
                         ],
                       ),
                     ),
@@ -112,33 +114,33 @@ class CostCalculatorWidget extends StatelessWidget {
               const SizedBox(height: 16),
 
               // Itemized Rates
-              _buildCostRow('Base Logistics Fee', '\$${quote!.breakdown['baseFee'] ?? '15.00'}'),
-              _buildCostRow('Distance Rate (Road)', quote!.breakdown['distanceRate'] ?? ''),
-              _buildCostRow('Weight Surcharge', quote!.breakdown['weightSurcharge'] ?? '\$0.00'),
-              _buildCostRow('Tax & Transit Insurance (8%)', quote!.breakdown['tax'] ?? '\$0.00'),
+              _buildCostRow('Base Freight Handling Fee', quote!.breakdown['baseFee'] ?? '₹650'),
+              _buildCostRow('Interstate Distance Tariff', quote!.breakdown['distanceRate'] ?? '₹24 / km'),
+              _buildCostRow('Cargo Weight Surcharge', quote!.breakdown['weightSurcharge'] ?? '₹0'),
+              _buildCostRow('Goods & Services Tax (18% GST)', quote!.breakdown['gst'] ?? '₹0'),
 
-              const SizedBox(height: 12),
-              const Divider(color: HamhaTheme.borderGrey),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
+              const Divider(color: HamhaTheme.borderSubtle),
+              const SizedBox(height: 14),
 
               // Total Fare
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'TOTAL ESTIMATE',
+                    'TOTAL FREIGHT QUOTE',
                     style: TextStyle(
-                      color: HamhaTheme.textDark,
+                      color: HamhaTheme.deepBlack,
                       fontWeight: FontWeight.w900,
                       fontSize: 15,
                     ),
                   ),
                   Text(
-                    '\$${quote!.totalFare} USD',
+                    '₹${quote!.totalFare} INR',
                     style: const TextStyle(
                       color: HamhaTheme.crimsonRed,
                       fontWeight: FontWeight.w900,
-                      fontSize: 24,
+                      fontSize: 26,
                     ),
                   ),
                 ],
@@ -153,7 +155,7 @@ class CostCalculatorWidget extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: HamhaTheme.crimsonRed,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
               ),
             ] else ...[
@@ -161,7 +163,7 @@ class CostCalculatorWidget extends StatelessWidget {
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 12.0),
                   child: Text(
-                    'Fill in weight and locations to compute exact freight fare.',
+                    'Fill in cargo weight and locations to compute exact freight fare.',
                     style: TextStyle(color: HamhaTheme.textMuted, fontSize: 13),
                     textAlign: TextAlign.center,
                   ),
@@ -192,10 +194,9 @@ class CostCalculatorWidget extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(title, style: const TextStyle(color: HamhaTheme.textMuted, fontSize: 13)),
-          Text(value, style: const TextStyle(color: HamhaTheme.textDark, fontSize: 13, fontWeight: FontWeight.w600)),
+          Text(value, style: const TextStyle(color: HamhaTheme.deepBlack, fontSize: 13, fontWeight: FontWeight.w700)),
         ],
       ),
     );
   }
 }
-

@@ -52,7 +52,6 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
         }
       });
 
-      // Fit map bounds once data is loaded
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _centerMap();
       });
@@ -68,7 +67,6 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
     final socket = SocketService();
     socket.joinOrderRoom(widget.orderId);
 
-    // Listen to real-time driver coordinates
     _locationSub = socket.driverLocationStream.listen((data) {
       if (!mounted) return;
       final lat = (data['lat'] as num?)?.toDouble();
@@ -87,7 +85,6 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
       }
     });
 
-    // Listen to status updates (e.g. Delivered)
     _statusSub = socket.orderStatusStream.listen((data) {
       if (!mounted) return;
       final status = data['status'];
@@ -147,13 +144,13 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        backgroundColor: HamhaTheme.cardBlack,
+        backgroundColor: HamhaTheme.crispWhite,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
           children: [
             Icon(Icons.check_circle, color: HamhaTheme.statusDelivered, size: 28),
             SizedBox(width: 10),
-            Text('Shipment Delivered!', style: TextStyle(color: HamhaTheme.crispWhite, fontSize: 18)),
+            Text('Shipment Delivered!', style: TextStyle(color: HamhaTheme.deepBlack, fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
         content: const Text(
@@ -189,7 +186,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        backgroundColor: HamhaTheme.deepBlack,
+        backgroundColor: HamhaTheme.warmCream,
         body: Center(
           child: CircularProgressIndicator(color: HamhaTheme.crimsonRed),
         ),
@@ -198,10 +195,10 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
 
     if (_errorMessage != null || _order == null) {
       return Scaffold(
-        backgroundColor: HamhaTheme.deepBlack,
+        backgroundColor: HamhaTheme.warmCream,
         appBar: AppBar(backgroundColor: Colors.transparent),
         body: Center(
-          child: Text(_errorMessage ?? 'Failed to load tracking', style: const TextStyle(color: HamhaTheme.crispWhite)),
+          child: Text(_errorMessage ?? 'Failed to load tracking', style: const TextStyle(color: HamhaTheme.deepBlack)),
         ),
       );
     }
@@ -209,21 +206,19 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
     final pickupLatLng = LatLng(_order!.pickupLat, _order!.pickupLon);
     final dropoffLatLng = LatLng(_order!.dropoffLat, _order!.dropoffLon);
 
-    // Initial driver position fallback to midpoint if coordinates not received yet
     final driverLatLng = _driverPosition ??
         LatLng(
           (pickupLatLng.latitude + dropoffLatLng.latitude) / 2,
           (pickupLatLng.longitude + dropoffLatLng.longitude) / 2,
         );
 
-    // Route polyline points
     final routePoints = [pickupLatLng, driverLatLng, dropoffLatLng];
 
     return Scaffold(
-      backgroundColor: HamhaTheme.deepBlack,
+      backgroundColor: HamhaTheme.warmCream,
       body: Stack(
         children: [
-          // 1. Full Screen Mapbox Clean Map
+          // 1. Clean Map Tile Layer
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
@@ -232,9 +227,8 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
               interactionOptions: const InteractionOptions(flags: InteractiveFlag.all),
             ),
             children: [
-              // Clean Dark Mapbox / Voyager Tile Layer
               TileLayer(
-                urlTemplate: AppConstants.mapboxNavigationDarkTileUrl,
+                urlTemplate: AppConstants.mapboxDarkTileUrl,
                 subdomains: const ['a', 'b', 'c', 'd'],
                 userAgentPackageName: 'com.hamha.customer',
               ),
@@ -244,27 +238,30 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                 polylines: [
                   Polyline(
                     points: routePoints,
-                    strokeWidth: 5.0,
+                    strokeWidth: 5.5,
                     color: HamhaTheme.crimsonRed,
                     borderColor: HamhaTheme.crimsonDark,
-                    borderStrokeWidth: 2.0,
+                    borderStrokeWidth: 1.5,
                   ),
                 ],
               ),
 
-              // Pins & Moving Markers Layer
+              // Markers Layer
               MarkerLayer(
                 markers: [
-                  // Pick-up Pin (Crimson ring)
+                  // Pick-up Pin
                   Marker(
                     point: pickupLatLng,
                     width: 44,
                     height: 44,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: HamhaTheme.deepBlack,
+                        color: HamhaTheme.crispWhite,
                         shape: BoxShape.circle,
-                        border: Border.all(color: HamhaTheme.crimsonRed, width: 3),
+                        border: Border.all(color: HamhaTheme.deepBlack, width: 2.5),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withAlpha(40), blurRadius: 8),
+                        ],
                       ),
                       child: const Center(
                         child: Icon(Icons.inventory_2, color: HamhaTheme.crimsonRed, size: 20),
@@ -272,7 +269,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                     ),
                   ),
 
-                  // Destination Pin (Crisp White Pin with Red accent)
+                  // Destination Pin
                   Marker(
                     point: dropoffLatLng,
                     width: 48,
@@ -282,7 +279,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                         color: HamhaTheme.crimsonRed,
                         shape: BoxShape.circle,
                         boxShadow: [
-                          BoxShadow(color: HamhaTheme.crimsonRed.withAlpha(150), blurRadius: 10),
+                          BoxShadow(color: HamhaTheme.crimsonRed.withAlpha(140), blurRadius: 10),
                         ],
                       ),
                       child: const Center(
@@ -291,23 +288,22 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                     ),
                   ),
 
-                  // Live Moving Driver Marker via Socket.io
+                  // Live Moving Driver Marker
                   Marker(
                     point: driverLatLng,
-                    width: 54,
-                    height: 54,
+                    width: 52,
+                    height: 52,
                     child: Transform.rotate(
                       angle: (_driverHeading * 3.14159) / 180,
                       child: Container(
                         decoration: BoxDecoration(
                           color: HamhaTheme.deepBlack,
                           shape: BoxShape.circle,
-                          border: Border.all(color: HamhaTheme.crimsonLight, width: 3),
+                          border: Border.all(color: HamhaTheme.crimsonRed, width: 3),
                           boxShadow: [
                             BoxShadow(
-                              color: HamhaTheme.crimsonRed.withAlpha(180),
-                              blurRadius: 16,
-                              spreadRadius: 2,
+                              color: Colors.black.withAlpha(80),
+                              blurRadius: 12,
                             ),
                           ],
                         ),
@@ -315,7 +311,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                           child: Icon(
                             Icons.navigation,
                             color: HamhaTheme.crispWhite,
-                            size: 26,
+                            size: 24,
                           ),
                         ),
                       ),
@@ -326,7 +322,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
             ],
           ),
 
-          // 2. Top Header Overlay (Back Button & Tracking Header)
+          // 2. Top Navigation Bar
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -335,21 +331,23 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                 children: [
                   Container(
                     decoration: BoxDecoration(
-                      color: HamhaTheme.deepBlack.withAlpha(200),
+                      color: HamhaTheme.crispWhite,
                       shape: BoxShape.circle,
-                      border: Border.all(color: HamhaTheme.cardBlack),
+                      boxShadow: [BoxShadow(color: Colors.black.withAlpha(25), blurRadius: 8)],
+                      border: Border.all(color: HamhaTheme.borderSubtle),
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new, color: HamhaTheme.crispWhite, size: 18),
+                      icon: const Icon(Icons.arrow_back_ios_new, color: HamhaTheme.deepBlack, size: 18),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: HamhaTheme.deepBlack.withAlpha(220),
+                      color: HamhaTheme.crispWhite,
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: HamhaTheme.crimsonRed.withAlpha(100)),
+                      boxShadow: [BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 8)],
+                      border: Border.all(color: HamhaTheme.crimsonRed.withAlpha(80)),
                     ),
                     child: Row(
                       children: [
@@ -365,9 +363,9 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                         const Text(
                           'LIVE GPS FEED',
                           style: TextStyle(
-                            color: HamhaTheme.crispWhite,
+                            color: HamhaTheme.deepBlack,
                             fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w800,
                             letterSpacing: 1.2,
                           ),
                         ),
@@ -376,12 +374,13 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                   ),
                   Container(
                     decoration: BoxDecoration(
-                      color: HamhaTheme.deepBlack.withAlpha(200),
+                      color: HamhaTheme.crispWhite,
                       shape: BoxShape.circle,
-                      border: Border.all(color: HamhaTheme.cardBlack),
+                      boxShadow: [BoxShadow(color: Colors.black.withAlpha(25), blurRadius: 8)],
+                      border: Border.all(color: HamhaTheme.borderSubtle),
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.my_location, color: HamhaTheme.crispWhite, size: 18),
+                      icon: const Icon(Icons.my_location, color: HamhaTheme.deepBlack, size: 18),
                       onPressed: _centerMap,
                     ),
                   ),
@@ -401,8 +400,8 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
               onCallDriver: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    backgroundColor: HamhaTheme.cardBlack,
-                    content: Text('Calling Driver: ${_order!.driverPhone ?? "+14155550199"}'),
+                    backgroundColor: HamhaTheme.deepBlack,
+                    content: Text('Calling Driver: ${_order!.driverPhone ?? "+1 415 555 0192"}'),
                   ),
                 );
               },
@@ -419,4 +418,3 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
     );
   }
 }
-

@@ -7,7 +7,7 @@ class HamhaLogo extends StatelessWidget {
 
   const HamhaLogo({
     super.key,
-    this.size = 100,
+    this.size = 90,
     this.showSubtitle = true,
   });
 
@@ -27,26 +27,33 @@ class HamhaLogo extends StatelessWidget {
         RichText(
           text: const TextSpan(
             style: TextStyle(
-              fontSize: 26,
+              fontSize: 24,
               fontWeight: FontWeight.w900,
-              letterSpacing: 2.5,
+              letterSpacing: 2.0,
               fontFamily: 'sans-serif',
             ),
             children: [
-              TextSpan(text: 'HAMHA ', style: TextStyle(color: HamhaTheme.crispWhite)),
+              TextSpan(text: 'HAMHA ', style: TextStyle(color: HamhaTheme.deepBlack)),
               TextSpan(text: 'LOGISTICS', style: TextStyle(color: HamhaTheme.crimsonRed)),
             ],
           ),
         ),
         if (showSubtitle) ...[
           const SizedBox(height: 6),
-          const Text(
-            'FAST • SECURE • NATIONWIDE FREIGHT',
-            style: TextStyle(
-              color: HamhaTheme.textMuted,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1.5,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            decoration: BoxDecoration(
+              color: HamhaTheme.deepBlack,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Text(
+              'FAST • SECURE • NATIONWIDE FREIGHT',
+              style: TextStyle(
+                color: HamhaTheme.crispWhite,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+              ),
             ),
           ),
         ],
@@ -61,16 +68,17 @@ class _HamhaLogoPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
 
-    // Background shield/circle ring
+    // Deep Black circular shield
     final circlePaint = Paint()
-      ..color = HamhaTheme.cardBlack
+      ..color = HamhaTheme.deepBlack
       ..style = PaintingStyle.fill;
     canvas.drawCircle(Offset(w / 2, h / 2), w * 0.48, circlePaint);
 
+    // Crimson Red accent outer ring
     final borderPaint = Paint()
-      ..color = HamhaTheme.crimsonRed.withAlpha(120)
+      ..color = HamhaTheme.crimsonRed
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5;
+      ..strokeWidth = 3.0;
     canvas.drawCircle(Offset(w / 2, h / 2), w * 0.48, borderPaint);
 
     // Dynamic Crimson Swoosh
@@ -78,28 +86,27 @@ class _HamhaLogoPainter extends CustomPainter {
       ..color = HamhaTheme.crimsonRed
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
-      ..strokeWidth = w * 0.08;
+      ..strokeWidth = w * 0.085;
 
     final path = Path();
-    path.moveTo(w * 0.18, h * 0.65);
-    path.quadraticBezierTo(w * 0.35, h * 0.88, w * 0.78, h * 0.45);
+    path.moveTo(w * 0.16, h * 0.65);
+    path.quadraticBezierTo(w * 0.35, h * 0.88, w * 0.82, h * 0.42);
     canvas.drawPath(path, swooshPaint);
 
-    // Letter 'H' stylized in crisp white
+    // Letter 'H' stylized in Crisp White
     final hPaint = Paint()
       ..color = HamhaTheme.crispWhite
-      ..strokeWidth = w * 0.09
+      ..strokeWidth = w * 0.095
       ..strokeCap = StrokeCap.square;
 
-    // Left bar
-    canvas.drawLine(Offset(w * 0.34, h * 0.28), Offset(w * 0.34, h * 0.72), hPaint);
-    // Right bar
-    canvas.drawLine(Offset(w * 0.66, h * 0.28), Offset(w * 0.66, h * 0.72), hPaint);
+    // Left vertical bar
+    canvas.drawLine(Offset(w * 0.35, h * 0.28), Offset(w * 0.35, h * 0.72), hPaint);
+    // Right vertical bar
+    canvas.drawLine(Offset(w * 0.65, h * 0.28), Offset(w * 0.65, h * 0.72), hPaint);
     // Cross bar
-    canvas.drawLine(Offset(w * 0.34, h * 0.50), Offset(w * 0.66, h * 0.50), hPaint);
+    canvas.drawLine(Offset(w * 0.35, h * 0.50), Offset(w * 0.65, h * 0.50), hPaint);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-

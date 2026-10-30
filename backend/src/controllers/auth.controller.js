@@ -158,8 +158,38 @@ exports.verifyOtp = async (req, res, next) => {
 };
 
 /**
- * Fetch Current Authenticated Profile
+ * Update Current Authenticated Profile
  */
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const { name, phone, email } = req.body;
+    const userId = req.user.id;
+
+    const result = await query(
+      `UPDATE users 
+       SET name = COALESCE($1, name),
+           phone = COALESCE($2, phone),
+           email = COALESCE($3, email),
+           updated_at = NOW()
+       WHERE id = $4
+       RETURNING id, name, email, phone, role, is_verified, created_at`,
+      [name, phone, email?.toLowerCase(), userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Profile updated successfully.',
+      user: result.rows[0],
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.getMe = async (req, res, next) => {
   try {
     const result = await query(

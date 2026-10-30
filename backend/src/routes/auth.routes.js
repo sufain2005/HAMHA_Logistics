@@ -10,6 +10,7 @@ router.post('/verify-otp', authController.verifyOtp);
 
 // Authenticated Self Profile
 router.get('/me', authenticateJWT, authController.getMe);
+router.patch('/profile', authenticateJWT, authController.updateProfile);
 
 module.exports = router;
 

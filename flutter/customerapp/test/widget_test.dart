@@ -8,8 +8,8 @@ void main() {
     expect(find.byType(HamhaLogo), findsOneWidget);
     expect(find.text('FAST • SECURE • NATIONWIDE FREIGHT'), findsOneWidget);
 
-    // Pump past splash timer so no timers are pending
-    await tester.pump(const Duration(seconds: 3));
-    await tester.pumpAndSettle();
+    // Pump forward by animation steps
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(seconds: 2));
   });
 }
