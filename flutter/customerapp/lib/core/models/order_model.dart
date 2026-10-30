@@ -22,6 +22,14 @@ class TransitCheckpoint {
       isCompleted: json['isCompleted'] ?? false,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'location': location,
+    'district': district,
+    'state': state,
+    'timestamp': timestamp,
+    'isCompleted': isCompleted,
+  };
 }
 
 class OrderModel {
@@ -136,4 +144,39 @@ class OrderModel {
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'order_code': orderCode,
+    'status': status,
+    'cargo_type': cargoType,
+    'weight_kg': weightKg,
+    'package_description': packageDescription,
+    'pickup_address': pickupAddress,
+    'pickup_lon': pickupLon,
+    'pickup_lat': pickupLat,
+    'dropoff_address': dropoffAddress,
+    'dropoff_lon': dropoffLon,
+    'dropoff_lat': dropoffLat,
+    'fare_amount': fareAmount,
+    'currency': currency,
+    'distance_km': distanceKm,
+    'estimated_duration_min': estimatedDurationMin,
+    'payment_status': paymentStatus,
+    'driver_id': driverId,
+    'driver_name': driverName,
+    'driver_phone': driverPhone,
+    'plate_number': vehiclePlate,
+    'vehicle_model': vehicleModel,
+    'driver_lon': driverLon,
+    'driver_lat': driverLat,
+    'driver_heading': driverHeading,
+    'driver_speed_kmh': driverSpeedKmh,
+    'current_district': currentDistrict,
+    'current_state': currentState,
+    'current_landmark': currentLandmark,
+    'expected_reach_time': expectedReachTime,
+    'checkpoints': checkpoints.map((c) => c.toJson()).toList(),
+    'created_at': createdAt.toIso8601String(),
+  };
 }

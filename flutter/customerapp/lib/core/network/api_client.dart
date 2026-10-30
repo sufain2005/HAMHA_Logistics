@@ -16,6 +16,29 @@ class ApiClient {
   bool isDemoMode = false;
 
   static final Map<String, UserModel> _cachedProfiles = {};
+  static final List<OrderModel> _userOrders = [];
+
+  // Active Admin-Configured Freight Tariffs (fallback or synced from Admin)
+  static Map<String, dynamic> activeTariffs = {
+    'baseFee': 350.0,
+    'perKmRate': 25.0,
+    'vehicleRates': {
+      'bike': 12.0,
+      'mini_van': 22.0,
+      'van': 32.0,
+      'truck': 55.0,
+      'heavy_4tire': 45.0,
+      'heavy_6tire': 65.0,
+      'heavy_8tire': 85.0,
+      'heavy_12tire': 110.0,
+    },
+    'weightBaseAllowanceKg': 10.0,
+    'perKgRate': 18.0,
+    'heavyWeightPerKgRate': 12.0,
+    'minimumFare': 250.0,
+    'gstPercent': 18.0,
+    'currency': 'INR',
+  };
 
   void setToken(String token) {
     _authToken = token;
@@ -289,6 +312,21 @@ class ApiClient {
   // SHIPMENT & COST CALCULATOR FLOWS (INR / ₹)
   // ==========================================
 
+  Future<Map<String, dynamic>> fetchAdminTariffs() async {
+    try {
+      final response = await http
+          .get(Uri.parse('${AppConstants.baseUrl}/customer/tariffs'), headers: _headers)
+          .timeout(const Duration(seconds: 4));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['tariffs'] != null) {
+        activeTariffs = Map<String, dynamic>.from(data['tariffs']);
+        return activeTariffs;
+      }
+    } catch (_) {}
+    return activeTariffs;
+  }
+
   Future<QuoteModel> calculateQuote({
     required double weightKg,
     required double pickupLon,
@@ -296,7 +334,10 @@ class ApiClient {
     required double dropoffLon,
     required double dropoffLat,
     String cargoType = 'Standard Cargo',
+    String vehicleType = 'van',
+    double? customDistanceKm,
   }) async {
+    // 1. Try backend calculation
     try {
       final response = await http
           .post(
@@ -309,6 +350,7 @@ class ApiClient {
               'dropoffLon': dropoffLon,
               'dropoffLat': dropoffLat,
               'cargoType': cargoType,
+              'vehicleType': vehicleType,
             }),
           )
           .timeout(const Duration(seconds: 4));
@@ -319,15 +361,32 @@ class ApiClient {
       }
     } catch (_) {}
 
-    // Accurate Indian logistics tariffs calculation (in INR ₹)
-    const double distanceKm = 142.5;
-    const int durationMin = 195; // 3 hrs 15 mins
-    final double baseFee = 650.0; // Base ₹650
-    final double distFee = distanceKm * 24.0; // ₹24 / km
-    final double weightFee = (weightKg > 10 ? (weightKg - 10) * 18.0 : 0.0); // ₹18 / kg surcharge
+    // 2. Dynamic Tariff Pricing Engine based directly on Admin settings (INR ₹)
+    final distanceKm = customDistanceKm ?? 125.0;
+    final int durationMin = (distanceKm / 40.0 * 60).round() + 20;
+
+    final double baseFee = (activeTariffs['baseFee'] as num?)?.toDouble() ?? 350.0;
+    
+    // Per KM rate for the chosen vehicle or default
+    double kmRate = (activeTariffs['perKmRate'] as num?)?.toDouble() ?? 25.0;
+    final vehicleRates = activeTariffs['vehicleRates'] as Map<String, dynamic>?;
+    if (vehicleRates != null && vehicleRates[vehicleType] != null) {
+      kmRate = (vehicleRates[vehicleType] as num).toDouble();
+    }
+
+    final double distFee = distanceKm * kmRate;
+    
+    // Weight surcharge based on Admin rate
+    final double weightAllowance = (activeTariffs['weightBaseAllowanceKg'] as num?)?.toDouble() ?? 10.0;
+    final double perKgRate = (activeTariffs['perKgRate'] as num?)?.toDouble() ?? 18.0;
+    final double excessWeight = weightKg > weightAllowance ? (weightKg - weightAllowance) : 0.0;
+    final double weightFee = excessWeight * perKgRate;
+
     final double subtotal = baseFee + distFee + weightFee;
-    final double gst = subtotal * 0.18; // 18% GST (Indian Freight Standard)
-    final double total = subtotal + gst;
+    final double gstRate = (activeTariffs['gstPercent'] as num?)?.toDouble() ?? 18.0;
+    final double gst = subtotal * (gstRate / 100.0);
+    final double minFare = (activeTariffs['minimumFare'] as num?)?.toDouble() ?? 250.0;
+    final double total = (subtotal + gst) < minFare ? minFare : (subtotal + gst);
 
     return QuoteModel(
       cargoType: cargoType,
@@ -338,9 +397,9 @@ class ApiClient {
       totalFare: total.round().toString(),
       breakdown: {
         'baseFee': '₹${baseFee.round()}',
-        'distanceRate': '₹24 / km (₹${distFee.round()})',
-        'weightSurcharge': '₹${weightFee.round()}',
-        'gst': '18% GST (₹${gst.round()})',
+        'distanceRate': '₹${kmRate.round()} / km (₹${distFee.round()})',
+        'weightSurcharge': '₹${perKgRate.round()} / kg (₹${weightFee.round()})',
+        'gst': '${gstRate.round()}% GST (₹${gst.round()})',
       },
     );
   }
@@ -357,6 +416,11 @@ class ApiClient {
     required double dropoffLat,
     String? dropoffContactName,
     String? dropoffContactPhone,
+    String? senderContactName,
+    String? senderContactPhone,
+    double? fareAmount,
+    double? distanceKm,
+    String vehicleType = 'van',
   }) async {
     try {
       final response = await http
@@ -375,27 +439,88 @@ class ApiClient {
               'dropoffLat': dropoffLat,
               'dropoffContactName': dropoffContactName,
               'dropoffContactPhone': dropoffContactPhone,
+              'senderContactName': senderContactName,
+              'senderContactPhone': senderContactPhone,
+              'vehicleType': vehicleType,
             }),
           )
           .timeout(const Duration(seconds: 4));
 
       final data = jsonDecode(response.body);
       if (response.statusCode >= 200 && response.statusCode < 300) {
+        final orderJson = data['order'];
+        final createdOrder = OrderModel.fromJson(orderJson);
+        _userOrders.insert(0, createdOrder);
         return data;
       }
     } catch (_) {}
 
     final newOrderId = 'ord-${DateTime.now().millisecondsSinceEpoch}';
+    final orderCode = 'HMH-${(10000 + DateTime.now().millisecond * 80)}';
+    final computedFare = fareAmount ?? 3450.0;
+    final computedDist = distanceKm ?? 125.0;
+
+    final createdOrder = OrderModel(
+      id: newOrderId,
+      orderCode: orderCode,
+      status: 'in_transit',
+      cargoType: cargoType,
+      weightKg: weightKg,
+      pickupAddress: pickupAddress,
+      pickupLon: pickupLon,
+      pickupLat: pickupLat,
+      dropoffAddress: dropoffAddress,
+      dropoffLon: dropoffLon,
+      dropoffLat: dropoffLat,
+      fareAmount: computedFare,
+      currency: 'INR',
+      distanceKm: computedDist,
+      estimatedDurationMin: 180,
+      paymentStatus: 'paid',
+      driverId: 'drv-live-101',
+      driverName: 'Suresh Kumar Yadav',
+      driverPhone: '+91 98201 44556',
+      vehiclePlate: 'MH-04-TR-9081',
+      vehicleModel: 'Eicher Pro 2049 (Heavy 4T)',
+      driverLon: pickupLon,
+      driverLat: pickupLat,
+      driverHeading: 90.0,
+      driverSpeedKmh: 48.0,
+      currentDistrict: 'Thane District',
+      currentState: 'Maharashtra',
+      currentLandmark: 'Eastern Express Highway Toll Plaza',
+      expectedReachTime: 'Today at 07:45 PM',
+      checkpoints: [
+        TransitCheckpoint(
+          location: 'Origin Pickup Hub',
+          district: 'Hub Dispatch Gate',
+          state: 'Maharashtra',
+          timestamp: 'Just Now',
+          isCompleted: true,
+        ),
+        TransitCheckpoint(
+          location: 'En-Route Highway Corridor',
+          district: 'State Highway',
+          state: 'Transit Corridor',
+          timestamp: 'In Transit',
+          isCompleted: false,
+        ),
+        TransitCheckpoint(
+          location: 'Destination Drop-off',
+          district: 'Consignee Receiver Terminal',
+          state: 'Destination State',
+          timestamp: 'Pending Delivery',
+          isCompleted: false,
+        ),
+      ],
+      createdAt: DateTime.now(),
+    );
+
+    _userOrders.insert(0, createdOrder);
+
     return {
       'success': true,
-      'order': {
-        'id': newOrderId,
-        'order_code': 'HMH-${(10000 + DateTime.now().millisecond * 80)}',
-        'status': 'in_transit',
-        'fare_amount': 4850.0,
-        'currency': 'INR',
-        'distance_km': 142.5,
-      },
+      'order': createdOrder.toJson(),
     };
   }
 
@@ -408,137 +533,13 @@ class ApiClient {
       final data = jsonDecode(response.body);
       if (response.statusCode == 200 && data['orders'] != null) {
         final list = data['orders'] as List;
-        return list.map((item) => OrderModel.fromJson(item)).toList();
+        final fetched = list.map((item) => OrderModel.fromJson(item)).toList();
+        if (fetched.isNotEmpty) return fetched;
       }
     } catch (_) {}
 
-    // Realistic Indian National Highway & Industrial Freight Records in INR
-    return [
-      OrderModel(
-        id: 'ord-active-1',
-        orderCode: 'HMH-89241',
-        status: 'in_transit',
-        cargoType: 'Industrial Electronics & Sensor Kits',
-        weightKg: 28.5,
-        pickupAddress: 'Bhiwandi Logistics Hub, Thane, Maharashtra',
-        pickupLon: 73.0544,
-        pickupLat: 19.2969,
-        dropoffAddress: 'Whitefield Tech Park, Bengaluru Urban, Karnataka',
-        dropoffLon: 77.7499,
-        dropoffLat: 12.9698,
-        fareAmount: 4850.0,
-        currency: 'INR',
-        distanceKm: 984.0,
-        estimatedDurationMin: 180,
-        paymentStatus: 'pending',
-        driverId: 'drv-1',
-        driverName: 'Rajesh Kumar Verma',
-        driverPhone: '+91 98234 11209',
-        vehiclePlate: 'MH 12 HM 8924',
-        vehicleModel: 'BharatBenz 1617R Multi-Axle Freight',
-        driverLon: 73.8567,
-        driverLat: 18.5204,
-        driverHeading: 135.0,
-        driverSpeedKmh: 62.0,
-        currentDistrict: 'Pune District, Maharashtra',
-        currentState: 'Maharashtra',
-        currentLandmark: 'Pimpri-Chinchwad Expressway Toll Plaza (NH 48)',
-        expectedReachTime: 'Today at 08:30 PM (2 hrs 15 mins remaining)',
-        checkpoints: [
-          TransitCheckpoint(
-            location: 'Thane Dispatch Hub',
-            district: 'Thane District',
-            state: 'Maharashtra',
-            timestamp: '09:15 AM',
-            isCompleted: true,
-          ),
-          TransitCheckpoint(
-            location: 'Navi Mumbai Tollway Pass',
-            district: 'Raigad District',
-            state: 'Maharashtra',
-            timestamp: '11:40 AM',
-            isCompleted: true,
-          ),
-          TransitCheckpoint(
-            location: 'Pune Bypass Hub',
-            district: 'Pune District',
-            state: 'Maharashtra',
-            timestamp: '02:15 PM (Reached)',
-            isCompleted: true,
-          ),
-          TransitCheckpoint(
-            location: 'Satara Highway Checkpost',
-            district: 'Satara District',
-            state: 'Maharashtra',
-            timestamp: '05:30 PM (Upcoming)',
-            isCompleted: false,
-          ),
-          TransitCheckpoint(
-            location: 'Whitefield Receiving Terminal',
-            district: 'Bengaluru Urban District',
-            state: 'Karnataka',
-            timestamp: '08:30 PM (Estimated Arrival)',
-            isCompleted: false,
-          ),
-        ],
-        createdAt: DateTime.now().subtract(const Duration(hours: 6)),
-      ),
-      OrderModel(
-        id: 'ord-delivered-1',
-        orderCode: 'HMH-31045',
-        status: 'delivered',
-        cargoType: 'Temperature-Controlled Pharma Consignment',
-        weightKg: 14.2,
-        pickupAddress: 'MIDC Industrial Estate, Navi Mumbai, Maharashtra',
-        pickupLon: 73.0297,
-        pickupLat: 19.0330,
-        dropoffAddress: 'Gachibowli Bio-Tech Zone, Hyderabad, Telangana',
-        dropoffLon: 78.3489,
-        dropoffLat: 17.4401,
-        fareAmount: 3200.0,
-        currency: 'INR',
-        distanceKm: 712.0,
-        estimatedDurationMin: 0,
-        paymentStatus: 'paid',
-        driverId: 'drv-2',
-        driverName: 'Vikramjit Singh',
-        driverPhone: '+91 97110 44590',
-        vehiclePlate: 'DL 01 HM 4591',
-        vehicleModel: 'Tata Ultra T.7 Reefer Van',
-        currentDistrict: 'Hyderabad District, Telangana',
-        currentState: 'Telangana',
-        currentLandmark: 'Bio-Tech Park Receiving Gate 3',
-        expectedReachTime: 'Delivered Successfully',
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-      OrderModel(
-        id: 'ord-delivered-2',
-        orderCode: 'HMH-19042',
-        status: 'delivered',
-        cargoType: 'Precision Automotive Machinery Parts',
-        weightKg: 58.0,
-        pickupAddress: 'Pithampur Automotive Cluster, Dhar, Madhya Pradesh',
-        pickupLon: 75.6800,
-        pickupLat: 22.6100,
-        dropoffAddress: 'Sanand GIDC Industrial Corridor, Ahmedabad, Gujarat',
-        dropoffLon: 72.3800,
-        dropoffLat: 22.9800,
-        fareAmount: 6450.0,
-        currency: 'INR',
-        distanceKm: 395.0,
-        paymentStatus: 'paid',
-        driverId: 'drv-3',
-        driverName: 'Anil Desai',
-        driverPhone: '+91 99042 88312',
-        vehiclePlate: 'GJ 01 HM 3042',
-        vehicleModel: 'Eicher Pro 3015 Heavy Truck',
-        currentDistrict: 'Ahmedabad District, Gujarat',
-        currentState: 'Gujarat',
-        currentLandmark: 'GIDC Receiving Dock 4',
-        expectedReachTime: 'Delivered Successfully',
-        createdAt: DateTime.now().subtract(const Duration(days: 3)),
-      ),
-    ];
+    // Return current user booked orders (initially empty if no orders booked yet)
+    return List.from(_userOrders);
   }
 
   Future<OrderModel> getOrderTracking(String orderId) async {
