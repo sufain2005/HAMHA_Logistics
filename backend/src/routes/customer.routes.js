@@ -8,6 +8,7 @@ router.use(authenticateJWT);
 router.use(requireRole('customer'));
 
 // Cost Calculator for shipment creation
+router.get('/tariffs', customerController.getTariffs);
 router.post('/calculate-quote', customerController.calculateQuote);
 
 // Order creation and management

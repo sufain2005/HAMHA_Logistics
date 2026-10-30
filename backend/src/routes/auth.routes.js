@@ -5,6 +5,7 @@ const { authenticateJWT } = require('../middleware/auth');
 
 // Public Auth Endpoints
 router.post('/register', authController.register);
+router.post('/register-owner', authController.registerOwner);
 router.post('/login', authController.login);
 router.post('/verify-otp', authController.verifyOtp);
 

@@ -81,6 +81,95 @@ exports.register = async (req, res, next) => {
 };
 
 /**
+ * Register a new Fleet Owner with multiple vehicles, GST, and Government ID
+ */
+exports.registerOwner = async (req, res, next) => {
+  try {
+    const {
+      fullName,
+      email,
+      phone,
+      password,
+      govtIdType,
+      govtIdNumber,
+      companyName,
+      gstNumber,
+      vehicles,
+    } = req.body;
+
+    if (!fullName || !email || !phone || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Full Name, Email, Phone number, and Password are required.',
+      });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPhone = phone.trim();
+
+    // Check existing
+    const existing = await query(
+      'SELECT id FROM users WHERE email = $1 OR phone = $2',
+      [cleanEmail, cleanPhone]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'An account with this email or phone number already exists.',
+      });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    // Insert user with role 'admin'
+    const result = await query(
+      `INSERT INTO users (name, email, phone, password_hash, role, is_verified) 
+       VALUES ($1, $2, $3, $4, 'admin', true) 
+       RETURNING id, name, email, phone, role, is_verified, created_at`,
+      [fullName, cleanEmail, cleanPhone, passwordHash]
+    );
+
+    const newOwner = result.rows[0];
+
+    // Insert registered vehicles if provided
+    if (Array.isArray(vehicles) && vehicles.length > 0) {
+      for (const v of vehicles) {
+        const plate = v.plateNumber || `MH-${Math.floor(10 + Math.random() * 89)}-${Math.floor(1000 + Math.random() * 8999)}`;
+        const model = v.model || v.tireCount || 'Commercial Vehicle';
+        const vType = ['motorcycle', 'van', 'box_truck', 'heavy_freight'].includes(v.type) ? v.type : 'van';
+        try {
+          await query(
+            `INSERT INTO vehicles (driver_id, type, plate_number, model, is_available) 
+             VALUES ($1, $2, $3, $4, true) 
+             ON CONFLICT (driver_id) DO NOTHING`,
+            [newOwner.id, vType, plate, model]
+          );
+        } catch (_) {}
+      }
+    }
+
+    const token = generateToken(newOwner);
+
+    return res.status(201).json({
+      success: true,
+      message: 'Fleet Owner registered successfully.',
+      user: {
+        ...newOwner,
+        companyName: companyName || fullName,
+        gstNumber: gstNumber || '',
+        govtIdType: govtIdType || 'Aadhaar',
+        govtIdNumber: govtIdNumber || '',
+        vehiclesCount: Array.isArray(vehicles) ? vehicles.length : 0,
+      },
+      token,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Login with role validation
  */
 exports.login = async (req, res, next) => {
