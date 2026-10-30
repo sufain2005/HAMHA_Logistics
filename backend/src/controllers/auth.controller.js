@@ -140,9 +140,9 @@ exports.registerOwner = async (req, res, next) => {
         const vType = ['motorcycle', 'van', 'box_truck', 'heavy_freight'].includes(v.type) ? v.type : 'van';
         try {
           await query(
-            `INSERT INTO vehicles (driver_id, type, plate_number, model, is_available) 
-             VALUES ($1, $2, $3, $4, true) 
-             ON CONFLICT (driver_id) DO NOTHING`,
+            `INSERT INTO vehicles (owner_id, driver_id, type, plate_number, model, is_available) 
+             VALUES ($1, NULL, $2, $3, $4, true) 
+             ON CONFLICT (plate_number) DO NOTHING`,
             [newOwner.id, vType, plate, model]
           );
         } catch (_) {}

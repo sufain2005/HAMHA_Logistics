@@ -13,6 +13,32 @@ async function seedDatabase() {
     const customerPass = await bcrypt.hash('Customer@123456', salt);
     const driverPass = await bcrypt.hash('Driver@123456', salt);
 
+    // Safeguard: Ensure users and vehicles table columns & constraints exist before insertion
+    await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS company_name VARCHAR(255);');
+    await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS gstin VARCHAR(50);');
+    await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS govt_id_type VARCHAR(50);');
+    await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS govt_id_number VARCHAR(100);');
+    await client.query('ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES users(id) ON DELETE SET NULL;');
+    await client.query('ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS tire_config VARCHAR(50);');
+    await client.query('ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS rc_photo_url TEXT;');
+    await client.query('ALTER TABLE vehicles ALTER COLUMN driver_id DROP NOT NULL;');
+    await client.query(`
+      DO $$ BEGIN
+        BEGIN
+          ALTER TABLE vehicles ALTER COLUMN type TYPE VARCHAR(50) USING type::VARCHAR;
+        EXCEPTION
+          WHEN OTHERS THEN NULL;
+        END;
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'vehicles_driver_id_key'
+        ) THEN
+          ALTER TABLE vehicles ADD CONSTRAINT vehicles_driver_id_key UNIQUE (driver_id);
+        END IF;
+      EXCEPTION
+        WHEN OTHERS THEN NULL;
+      END $$;
+    `);
+
     // 1. Seed Users (Fleet Owner/Admin, Customer, Driver)
     const adminRes = await client.query(
       `INSERT INTO users (name, email, phone, password_hash, role, is_verified, company_name, gstin, govt_id_type, govt_id_number)
@@ -42,14 +68,20 @@ async function seedDatabase() {
     const customerId = customerRes.rows[0].id;
     const driverId = driverRes.rows[0].id;
 
-    // 2. Seed Driver Vehicles with live PostGIS coordinates (Bhiwandi / Mumbai MMR)
+    // 2. Clean up any existing seed vehicles to ensure 100% idempotent insertion
+    await client.query(
+      'DELETE FROM vehicles WHERE plate_number IN ($1, $2) OR driver_id = $3',
+      ['MH-04-TR-9081', 'MH-04-AB-1290', driverId]
+    );
+
+    // Seed Driver Vehicles with live PostGIS coordinates (Bhiwandi / Mumbai MMR)
     // Longitude: 73.0544, Latitude: 19.2969
     await client.query(
       `INSERT INTO vehicles (
         owner_id, driver_id, type, tire_config, plate_number, model, color, max_weight_kg, 
         is_online, is_available, current_location, heading, speed_kmh
        ) VALUES (
-        $1, $2, 'truck', '6 Tire', 'MH-04-TR-9081', 'Eicher Pro 2049 (6 Tire)', 'Crisp White', 3500.00,
+        $1, $2, 'box_truck', '6 Tire', 'MH-04-TR-9081', 'Eicher Pro 2049 (6 Tire)', 'Crisp White', 3500.00,
         TRUE, FALSE, ST_SetSRID(ST_MakePoint(73.0544, 19.2969), 4326)::geography, 90.0, 48.0
        ) ON CONFLICT (plate_number) DO UPDATE SET
         is_online = TRUE,
@@ -57,13 +89,19 @@ async function seedDatabase() {
       [adminId, driverId]
     );
 
-    // Seed additional fleet vehicle for Owner
+    // Seed additional fleet vehicle for Owner (unassigned to any driver)
     await client.query(
       `INSERT INTO vehicles (
-        owner_id, type, tire_config, plate_number, model, color, max_weight_kg, is_online, is_available
+        owner_id, driver_id, type, tire_config, plate_number, model, color, max_weight_kg, is_online, is_available
        ) VALUES (
-        $1, 'van', '4 Tire', 'MH-04-AB-1290', 'Tata Ace Gold Super (4 Tire)', 'Silver Gray', 1200.00, FALSE, TRUE
-       ) ON CONFLICT (plate_number) DO NOTHING`,
+        $1, NULL, 'van', '4 Tire', 'MH-04-AB-1290', 'Tata Ace Gold Super (4 Tire)', 'Silver Gray', 1200.00, FALSE, TRUE
+       ) ON CONFLICT (plate_number) DO UPDATE SET
+        owner_id = EXCLUDED.owner_id,
+        driver_id = EXCLUDED.driver_id,
+        model = EXCLUDED.model,
+        tire_config = EXCLUDED.tire_config,
+        is_online = FALSE,
+        is_available = TRUE`,
       [adminId]
     );
 

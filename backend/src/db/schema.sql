@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS users (
     phone VARCHAR(30) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     is_verified BOOLEAN DEFAULT FALSE,
-    company_name VARCHAR(150),
+    company_name VARCHAR(255),
     gstin VARCHAR(50),
     govt_id_type VARCHAR(50),
     govt_id_number VARCHAR(100),
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- Ensure columns exist if table was previously created
-ALTER TABLE users ADD COLUMN IF NOT EXISTS company_name VARCHAR(150);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS company_name VARCHAR(255);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS gstin VARCHAR(50);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS govt_id_type VARCHAR(50);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS govt_id_number VARCHAR(100);
@@ -99,6 +99,17 @@ CREATE TABLE IF NOT EXISTS vehicles (
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES users(id) ON DELETE SET NULL;
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS tire_config VARCHAR(50);
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS rc_photo_url TEXT;
+ALTER TABLE vehicles ALTER COLUMN driver_id DROP NOT NULL;
+
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'vehicles_driver_id_key'
+    ) THEN
+        ALTER TABLE vehicles ADD CONSTRAINT vehicles_driver_id_key UNIQUE (driver_id);
+    END IF;
+EXCEPTION
+    WHEN duplicate_table OR duplicate_object THEN null;
+END $$;
 
 -- 5. Orders Table (Consignments)
 CREATE TABLE IF NOT EXISTS orders (
@@ -253,6 +264,7 @@ CREATE INDEX IF NOT EXISTS idx_checkpoints_order_id ON transit_checkpoints(order
 -- HELPER FUNCTIONS & TRIGGERS
 -- ============================================================================
 
+DROP FUNCTION IF EXISTS update_timestamp_column CASCADE;
 CREATE OR REPLACE FUNCTION update_timestamp_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -280,6 +292,7 @@ CREATE TRIGGER trg_orders_updated_at
     EXECUTE FUNCTION update_timestamp_column();
 
 -- Geospatial function: Find active drivers within a radius (in meters)
+DROP FUNCTION IF EXISTS find_nearby_available_drivers CASCADE;
 CREATE OR REPLACE FUNCTION find_nearby_available_drivers(
     origin_lon DOUBLE PRECISION,
     origin_lat DOUBLE PRECISION,
@@ -301,7 +314,7 @@ BEGIN
         u.id AS driver_id,
         u.name AS driver_name,
         u.phone,
-        v.type AS vehicle_type,
+        v.type::VARCHAR AS vehicle_type,
         v.plate_number,
         ST_Distance(
             v.current_location,
