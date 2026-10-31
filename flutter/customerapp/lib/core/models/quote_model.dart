@@ -7,6 +7,10 @@ class QuoteModel {
   final String totalFare;
   final Map<String, dynamic> breakdown;
 
+  double get fareAmount =>
+      double.tryParse(totalFare.replaceAll('₹', '').replaceAll(',', '').trim()) ??
+      0.0;
+
   QuoteModel({
     required this.cargoType,
     required this.weightKg,

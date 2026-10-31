@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 class OwnerCorridorRouteModel {
   final String id;
   final String ownerId;
