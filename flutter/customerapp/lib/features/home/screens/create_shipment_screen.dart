@@ -21,6 +21,7 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
   String _selectedVehicle = 'van'; // 'bike', 'mini_van', 'van', 'truck', 'heavy_6tire'
   final _weightController = TextEditingController(text: '18.5');
   final _descriptionController = TextEditingController(text: 'Heavy duty boxed components');
+  final _otherCargoDescriptionController = TextEditingController();
 
   // Origin (Pick-up Point) - Real Structured Indian Address
   final _pickupBuildingController = TextEditingController(text: 'Plot 45, Gate 3, Bhiwandi Logistics Park');
@@ -96,6 +97,7 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
   void dispose() {
     _weightController.dispose();
     _descriptionController.dispose();
+    _otherCargoDescriptionController.dispose();
 
     _pickupBuildingController.dispose();
     _pickupStreetController.dispose();
@@ -375,8 +377,12 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
       final defaultFare = double.tryParse(_currentQuote?.totalFare ?? '3450') ?? 3450.0;
       final fare = _selectedOwnerRoute != null ? _selectedOwnerRoute!.offeredFare : defaultFare;
 
+      final finalCargoType = _selectedCargo == 'Other'
+          ? 'Other: ${_otherCargoDescriptionController.text.trim().isEmpty ? "Bike Delivery" : _otherCargoDescriptionController.text.trim()}'
+          : _selectedCargo;
+
       final res = await ApiClient().createOrder(
-        cargoType: _selectedCargo,
+        cargoType: finalCargoType,
         weightKg: weight,
         packageDescription: _descriptionController.text.trim(),
         pickupAddress: fullPickup,
@@ -484,14 +490,46 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
                           DropdownMenuItem(value: 'Automotive Spare Parts', child: Text('Automotive Parts & Components')),
                           DropdownMenuItem(value: 'General Commercial Freight', child: Text('General Commercial Freight / FMCG')),
                           DropdownMenuItem(value: 'Heavy Raw Materials', child: Text('Heavy Raw Materials / Metals')),
+                          DropdownMenuItem(value: 'Other', child: Text('Other / Custom Parcel (Bike Delivery)')),
                         ],
                         onChanged: (val) {
                           if (val != null) {
-                            setState(() => _selectedCargo = val);
+                            setState(() {
+                              _selectedCargo = val;
+                              if (val == 'Other') {
+                                _selectedVehicle = 'bike';
+                                final currentW = double.tryParse(_weightController.text) ?? 0;
+                                if (currentW > 20.0 || currentW == 0) {
+                                  _weightController.text = '2.5';
+                                }
+                              }
+                            });
                             _calculateQuote();
                           }
                         },
                       ),
+                      if (_selectedCargo == 'Other') ...[
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _otherCargoDescriptionController,
+                          decoration: InputDecoration(
+                            labelText: 'Describe Item(s) Sent via Bike',
+                            hintText: 'e.g. Tiffin / food delivery, legal documents, spare keys, small parcel',
+                            prefixIcon: const Icon(Icons.two_wheeler, color: HamhaTheme.crimsonRed),
+                            filled: true,
+                            fillColor: HamhaTheme.crimsonTint,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: HamhaTheme.crimsonRed.withAlpha(60)),
+                            ),
+                          ),
+                          onChanged: (v) {
+                            if (_descriptionController.text.isEmpty || _descriptionController.text == 'Heavy duty boxed components') {
+                              _descriptionController.text = v;
+                            }
+                          },
+                        ),
+                      ],
                       const SizedBox(height: 16),
 
                       // Commercial Vehicle Selection
@@ -990,25 +1028,23 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 6,
             children: [
-              const Expanded(
-                child: Row(
-                  children: [
-                    Icon(Icons.calculate_outlined, color: HamhaTheme.crimsonRed, size: 20),
-                    SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        'TRANSPARENT FREIGHT TARIFF BREAKDOWN',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: HamhaTheme.deepBlack, letterSpacing: 0.4),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(Icons.calculate_outlined, color: HamhaTheme.crimsonRed, size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'TRANSPARENT FREIGHT TARIFF BREAKDOWN',
+                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: HamhaTheme.deepBlack, letterSpacing: 0.4),
+                  ),
+                ],
               ),
-              const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
@@ -1016,8 +1052,8 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Text(
-                  'SYNCED WITH ADMIN',
-                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF059669)),
+                  'SYNCED WITH ADMIN PRICING',
+                  style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w900, color: Color(0xFF059669)),
                 ),
               ),
             ],

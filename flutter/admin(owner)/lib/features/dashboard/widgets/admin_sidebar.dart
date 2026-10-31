@@ -183,6 +183,13 @@ class AdminSidebar extends StatelessWidget {
                 ),
                 _buildNavItem(
                   index: 6,
+                  icon: Icons.account_circle_outlined,
+                  title: 'Owner Profile & Fleet HQ',
+                  subtitle: 'Profile, Vehicles & Request Driver',
+                  permission: AdminPermission.viewFleet,
+                ),
+                _buildNavItem(
+                  index: 7,
                   icon: Icons.insights_outlined,
                   title: 'Analytics & Reports',
                   subtitle: 'Revenue & Performance Metrics',

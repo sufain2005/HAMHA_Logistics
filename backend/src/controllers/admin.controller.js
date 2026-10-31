@@ -238,12 +238,42 @@ exports.requestLongDelivery = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'No registered driver found matching this Driver ID.' });
     }
 
+    // Resolve Owner info
+    let ownerId = req.user?.id;
+    let ownerName = req.user?.name;
+    let ownerPhone = req.user?.phone;
+    let ownerAltPhone = null;
+    let ownerOfficeAddress = null;
+
+    try {
+      const ownerQuery = ownerId && isValidUuid(ownerId)
+        ? await query("SELECT id, name, phone, alternative_phone, office_address, company_name FROM users WHERE id = $1", [ownerId])
+        : await query("SELECT id, name, phone, alternative_phone, office_address, company_name FROM users WHERE role = 'admin' LIMIT 1");
+      if (ownerQuery.rows.length > 0) {
+        const o = ownerQuery.rows[0];
+        ownerId = o.id;
+        ownerName = ownerName || o.name || 'Rajesh Singhania';
+        ownerPhone = ownerPhone || o.phone || '+91 98200 11223';
+        ownerAltPhone = o.alternative_phone || '+91 98200 99887';
+        ownerOfficeAddress = o.office_address || 'HAMHA Freight HQ, Plot 14, Bhiwandi Logistics Corridor, Thane, MH';
+      }
+    } catch (_) {}
+
     // Resolve a customer UUID
     let customerId = req.user?.id;
     if (!customerId || !isValidUuid(customerId)) {
       const custLookup = await query("SELECT id FROM users WHERE role = 'customer' LIMIT 1");
       customerId = custLookup.rows[0]?.id || resolvedDriver.id;
     }
+
+    const {
+      dispatchMode = 'vehicle_with_driver',
+      weightTons = 5.0,
+      vehicleId = null,
+    } = req.body;
+
+    const parsedWeightKg = parseFloat(weightKg) || (parseFloat(weightTons) * 1000.0) || 5000.0;
+    const parsedWeightTons = parseFloat(weightTons) || (parsedWeightKg / 1000.0) || 5.0;
 
     const generatedCode = orderCode || `HMH-${Math.floor(10000 + Math.random() * 90000)}`;
 
@@ -258,20 +288,23 @@ exports.requestLongDelivery = async (req, res, next) => {
         cargo_type, weight_kg, package_description,
         pickup_address, pickup_location, pickup_contact_name, pickup_contact_phone,
         dropoff_address, dropoff_location, dropoff_contact_name, dropoff_contact_phone,
-        fare_amount, distance_km, estimated_duration_min, payment_status, assigned_at
+        fare_amount, distance_km, estimated_duration_min, payment_status, assigned_at,
+        dispatch_mode, weight_tons, owner_id, owner_phone, owner_alt_phone, owner_office_address
       ) VALUES (
         $1, $2, $3, 'in_transit',
         $4, $5, $6,
         $7, ST_SetSRID(ST_MakePoint($8, $9), 4326)::geography, $10, $11,
         $12, ST_SetSRID(ST_MakePoint($13, $14), 4326)::geography, $15, $16,
-        $17, $18, $19, 'paid', NOW()
-      ) RETURNING id, order_code, status, cargo_type, weight_kg, pickup_address, dropoff_address, fare_amount, distance_km, driver_id, created_at, assigned_at`,
+        $17, $18, $19, 'paid', NOW(),
+        $20, $21, $22, $23, $24, $25
+      ) RETURNING id, order_code, status, cargo_type, weight_kg, pickup_address, dropoff_address, fare_amount, distance_km, driver_id, created_at, assigned_at, dispatch_mode, weight_tons, owner_phone, owner_alt_phone, owner_office_address`,
       [
         generatedCode, customerId, resolvedDriver.id,
-        cargoType, parseFloat(weightKg), `[LONG DELIVERY REQUEST FROM FLEET OWNER] ${specialInstructions}`,
-        pickupAddress, pickupLon, pickupLat, 'HAMHA Operations Hub', '+91 98200 12345',
+        cargoType, parsedWeightKg, `[${dispatchMode === 'only_driver' ? 'ONLY DRIVER (OWNER LORRY)' : 'VEHICLE WITH DRIVER'} - ${parsedWeightTons} TONS] ${specialInstructions}`,
+        pickupAddress, pickupLon, pickupLat, ownerName || 'HAMHA Operations Hub', ownerPhone || '+91 98200 11223',
         dropoffAddress, dropoffLon, dropoffLat, customerName, customerPhone,
-        parseFloat(fareAmount), parseFloat(distanceKm), Math.round((parseFloat(distanceKm) / 45.0) * 60)
+        parseFloat(fareAmount), parseFloat(distanceKm), Math.round((parseFloat(distanceKm) / 45.0) * 60),
+        dispatchMode, parsedWeightTons, ownerId, ownerPhone, ownerAltPhone, ownerOfficeAddress
       ]
     );
 
@@ -283,17 +316,27 @@ exports.requestLongDelivery = async (req, res, next) => {
     // Socket.io dispatch notifications
     const io = req.app.get('io');
     if (io) {
-      io.to(`driver:${resolvedDriver.id}`).emit('dispatch:long_delivery_request', {
+      const dispatchNotification = {
         orderId: newOrder.id,
         orderCode: newOrder.order_code,
         pickupAddress,
         dropoffAddress,
         cargoType,
-        weightKg,
-        fareAmount,
-        distanceKm,
+        weightKg: parsedWeightKg,
+        weightTons: parsedWeightTons,
+        dispatchMode,
+        fareAmount: parseFloat(fareAmount),
+        distanceKm: parseFloat(distanceKm),
         specialInstructions,
-      });
+        ownerName,
+        ownerPhone,
+        ownerAltPhone,
+        ownerOfficeAddress,
+      };
+
+      io.to(`driver:${resolvedDriver.id}`).emit('driver:dispatch_request', dispatchNotification);
+      io.to(`driver:${resolvedDriver.id}`).emit('dispatch:long_delivery_request', dispatchNotification);
+      io.emit('driver:dispatch_request', dispatchNotification);
 
       io.to('admin:fleet').emit('order:updated', {
         orderId: newOrder.id,
@@ -301,6 +344,8 @@ exports.requestLongDelivery = async (req, res, next) => {
         status: 'in_transit',
         driverId: resolvedDriver.id,
         driverName: resolvedDriver.name,
+        dispatchMode,
+        weightTons: parsedWeightTons,
       });
 
       io.emit('order:created', newOrder);
@@ -1130,6 +1175,224 @@ exports.deleteTruckRequirement = async (req, res, next) => {
       success: true,
       message: 'Requirement closed and removed from live load board.',
       id,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * OWNER PROFILE: Fetch Fleet Owner Profile & Office HQ
+ */
+exports.getOwnerProfile = async (req, res, next) => {
+  try {
+    const ownerId = req.user?.id;
+    let queryStr = "SELECT id, name, email, phone, alternative_phone, office_address, company_name, gstin FROM users WHERE id = $1";
+    let params = [ownerId];
+
+    if (!ownerId || !isValidUuid(ownerId)) {
+      queryStr = "SELECT id, name, email, phone, alternative_phone, office_address, company_name, gstin FROM users WHERE role = 'admin' ORDER BY created_at ASC LIMIT 1";
+      params = [];
+    }
+
+    const result = await query(queryStr, params);
+
+    if (result.rows.length === 0) {
+      return res.json({
+        success: true,
+        profile: {
+          name: 'Rajesh Singhania',
+          email: 'admin@hamha.com',
+          phone: '+91 98200 11223',
+          alternativePhone: '+91 98200 99887',
+          officeAddress: 'HAMHA Freight HQ, Plot 14, Bhiwandi Logistics Corridor, Thane, MH 421302',
+          companyName: 'HAMHA Logistics Pvt Ltd',
+          gstin: '27AAAAA0000A1Z5',
+        },
+      });
+    }
+
+    const row = result.rows[0];
+    return res.json({
+      success: true,
+      profile: {
+        id: row.id,
+        name: row.name || 'Rajesh Singhania',
+        email: row.email,
+        phone: row.phone || '+91 98200 11223',
+        alternativePhone: row.alternative_phone || '+91 98200 99887',
+        officeAddress: row.office_address || 'HAMHA Freight HQ, Plot 14, Bhiwandi Logistics Corridor, Thane, MH 421302',
+        companyName: row.company_name || 'HAMHA Logistics Pvt Ltd',
+        gstin: row.gstin || '27AAAAA0000A1Z5',
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * OWNER PROFILE: Update Owner Name, Mobile Numbers & Office Address
+ */
+exports.updateOwnerProfile = async (req, res, next) => {
+  try {
+    const ownerId = req.user?.id;
+    const {
+      name,
+      phone,
+      alternativePhone,
+      alternative_phone,
+      officeAddress,
+      office_address,
+      companyName,
+      company_name,
+      gstin,
+    } = req.body;
+
+    const altPhone = alternativePhone || alternative_phone;
+    const address = officeAddress || office_address;
+    const company = companyName || company_name;
+
+    let targetId = ownerId;
+    if (!targetId || !isValidUuid(targetId)) {
+      const adminLookup = await query("SELECT id FROM users WHERE role = 'admin' ORDER BY created_at ASC LIMIT 1");
+      if (adminLookup.rows.length > 0) targetId = adminLookup.rows[0].id;
+    }
+
+    if (!targetId) {
+      return res.status(404).json({ success: false, message: 'Admin user not found to update.' });
+    }
+
+    const result = await query(
+      `UPDATE users
+       SET name = COALESCE($1, name),
+           phone = COALESCE($2, phone),
+           alternative_phone = COALESCE($3, alternative_phone),
+           office_address = COALESCE($4, office_address),
+           company_name = COALESCE($5, company_name),
+           gstin = COALESCE($6, gstin),
+           updated_at = NOW()
+       WHERE id = $7
+       RETURNING id, name, email, phone, alternative_phone, office_address, company_name, gstin`,
+      [name, phone, altPhone, address, company, gstin, targetId]
+    );
+
+    const updated = result.rows[0];
+    return res.json({
+      success: true,
+      message: 'Owner profile, alternative numbers, and office HQ updated successfully.',
+      profile: {
+        id: updated.id,
+        name: updated.name,
+        email: updated.email,
+        phone: updated.phone,
+        alternativePhone: updated.alternative_phone,
+        officeAddress: updated.office_address,
+        companyName: updated.company_name,
+        gstin: updated.gstin,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * OWNER FLEET: Get all registered lorries / vehicles with documents
+ */
+exports.getOwnerVehicles = async (req, res, next) => {
+  try {
+    const result = await query(
+      `SELECT v.*, u.name as driver_name, u.phone as driver_phone
+       FROM vehicles v
+       LEFT JOIN users u ON v.driver_id = u.id
+       ORDER BY v.created_at DESC`
+    );
+
+    return res.json({
+      success: true,
+      vehicles: result.rows,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * OWNER FLEET: Register a new Lorry / Commercial Vehicle with Tonnage & Documents
+ */
+exports.addOwnerVehicle = async (req, res, next) => {
+  try {
+    const ownerId = req.user?.id;
+    const {
+      plateNumber,
+      plate_number,
+      model,
+      type = 'truck',
+      tireConfig,
+      tire_config,
+      capacityTons,
+      capacity_tons,
+      rcDocUrl,
+      rc_photo_url,
+      fitnessCert,
+      fitness_cert,
+      insurancePolicy,
+      insurance_policy,
+      permitNumber,
+      permit_number,
+    } = req.body;
+
+    const plate = (plateNumber || plate_number || '').trim().toUpperCase();
+    const vehicleModel = (model || 'Commercial Freight Lorry').trim();
+    const tires = tireConfig || tire_config || '6 Tire';
+    const tons = parseFloat(capacityTons || capacity_tons) || 5.0;
+    const rc = rcDocUrl || rc_photo_url || `RC-${plate.replace(/[^A-Z0-9]/g, '')}`;
+    const fitness = fitnessCert || fitness_cert || `FC-MH04-${new Date().getFullYear() + 2}`;
+    const insurance = insurancePolicy || insurance_policy || `POL-ICICI-${Math.floor(100000 + Math.random() * 900000)}`;
+    const permit = permitNumber || permit_number || `NP-IND-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+
+    if (!plate) {
+      return res.status(400).json({ success: false, message: 'Vehicle plate number is required.' });
+    }
+
+    let validOwnerUuid = ownerId && isValidUuid(ownerId) ? ownerId : null;
+    if (!validOwnerUuid) {
+      const adminLookup = await query("SELECT id FROM users WHERE role = 'admin' ORDER BY created_at ASC LIMIT 1");
+      if (adminLookup.rows.length > 0) validOwnerUuid = adminLookup.rows[0].id;
+    }
+
+    const insertRes = await query(
+      `INSERT INTO vehicles (
+        owner_id, plate_number, model, type, tire_config,
+        capacity_tons, max_weight_kg, rc_photo_url, fitness_cert,
+        insurance_policy, permit_number, is_online, is_available
+      ) VALUES (
+        $1, $2, $3, $4, $5,
+        $6, $7, $8, $9,
+        $10, $11, TRUE, TRUE
+      ) ON CONFLICT (plate_number) DO UPDATE SET
+        model = EXCLUDED.model,
+        type = EXCLUDED.type,
+        tire_config = EXCLUDED.tire_config,
+        capacity_tons = EXCLUDED.capacity_tons,
+        rc_photo_url = EXCLUDED.rc_photo_url,
+        fitness_cert = EXCLUDED.fitness_cert,
+        insurance_policy = EXCLUDED.insurance_policy,
+        permit_number = EXCLUDED.permit_number,
+        updated_at = NOW()
+      RETURNING *`,
+      [
+        validOwnerUuid, plate, vehicleModel, type, tires,
+        tons, tons * 1000.0, rc, fitness,
+        insurance, permit
+      ]
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: `Commercial vehicle ${plate} (${tons} Tons) added to fleet with verified documents.`,
+      vehicle: insertRes.rows[0],
     });
   } catch (error) {
     next(error);

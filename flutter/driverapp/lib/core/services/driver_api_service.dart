@@ -502,4 +502,35 @@ class DriverApiService {
     // Strictly delivered orders
     return DriverCompletedOrderModel.sampleCompletedOrders();
   }
+
+  // ==========================================
+  // FLEET OWNER CONTACT & HQ DEPOT
+  // ==========================================
+
+  Future<Map<String, dynamic>> fetchFleetOwnerContact() async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse('${ApiConstants.baseUrl}/driver/fleet-owner'),
+            headers: _headers,
+          )
+          .timeout(const Duration(seconds: 4));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        if (data['owner'] != null) {
+          return data['owner'] as Map<String, dynamic>;
+        }
+      }
+    } catch (_) {}
+
+    return {
+      'name': 'Rajesh Singhania',
+      'companyName': 'HAMHA Logistics Pvt Ltd',
+      'phone': '+91 98200 11223',
+      'alternativePhone': '+91 98200 99887',
+      'officeAddress': 'HAMHA Freight HQ, Plot 14, Bhiwandi Logistics Corridor, Thane, MH 421302',
+      'email': 'admin@hamha.com',
+    };
+  }
 }

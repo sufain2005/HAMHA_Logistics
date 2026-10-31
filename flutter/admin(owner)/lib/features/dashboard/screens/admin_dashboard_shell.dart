@@ -19,6 +19,7 @@ import '../../pricing/screens/tariffs_pricing_screen.dart';
 import '../../finance/screens/financial_ledgers_screen.dart';
 import '../../disputes/screens/dispute_audit_hub_screen.dart';
 import '../../fleet/widgets/owner_post_truck_requirement_modal.dart';
+import '../../profile/screens/owner_profile_screen.dart';
 import '../widgets/admin_sidebar.dart';
 import '../widgets/admin_top_metrics_bar.dart';
 import '../../auth/screens/admin_login_screen.dart';
@@ -324,6 +325,8 @@ class _AdminDashboardShellState extends State<AdminDashboardShell> {
       case 5:
         return const DisputeAuditHubScreen();
       case 6:
+        return const OwnerProfileScreen();
+      case 7:
         return _buildPlaceholderModule('Analytics & Reports', 'Multi-Chart Revenue Patterns & System Busy Hours (Phase 5)');
       default:
         return _buildFleetSplitView();

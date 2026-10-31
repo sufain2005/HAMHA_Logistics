@@ -62,9 +62,23 @@ class DriverSocketService {
         onStatusChange?.call(false);
       });
 
-      // Listen for incoming dispatches from dispatcher
+      // Listen for incoming dispatches from dispatcher & owner
       _socket?.on('dispatch:offer', (data) {
         debugPrint('🚚 [DriverSocket] Incoming Dispatch Offer: $data');
+        if (data is Map<String, dynamic>) {
+          _onDispatchOfferCallback?.call(data);
+        }
+      });
+
+      _socket?.on('driver:dispatch_request', (data) {
+        debugPrint('🚚 [DriverSocket] Incoming Trip Request from Owner: $data');
+        if (data is Map<String, dynamic>) {
+          _onDispatchOfferCallback?.call(data);
+        }
+      });
+
+      _socket?.on('dispatch:long_delivery_request', (data) {
+        debugPrint('🚚 [DriverSocket] Incoming Long Delivery Request: $data');
         if (data is Map<String, dynamic>) {
           _onDispatchOfferCallback?.call(data);
         }

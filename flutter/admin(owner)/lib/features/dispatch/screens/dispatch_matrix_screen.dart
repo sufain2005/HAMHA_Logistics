@@ -962,14 +962,17 @@ class _RequestLongDeliveryModalState extends State<_RequestLongDeliveryModal> {
     });
 
     final driverId = _driverIdController.text.trim();
-    final weight = double.tryParse(_weightController.text.trim()) ?? 450.0;
+    final inputWeight = double.tryParse(_weightController.text.trim()) ?? 5.0;
+    final weightTons = inputWeight > 100 ? (inputWeight / 1000.0) : inputWeight;
     final fare = double.tryParse(_fareController.text.trim()) ?? 18500.0;
     final distance = double.tryParse(_distanceController.text.trim()) ?? 145.0;
 
     final createdOrder = await AdminApiClient().requestLongDelivery(
       driverId: driverId,
       cargoType: _cargoController.text.trim(),
-      weightKg: weight,
+      weightKg: weightTons * 1000.0,
+      weightTons: weightTons,
+      dispatchMode: 'vehicle_with_driver',
       pickupAddress: _pickupController.text.trim(),
       dropoffAddress: _dropoffController.text.trim(),
       fareAmount: fare,

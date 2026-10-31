@@ -284,32 +284,88 @@ class _DispatchOfferModalState extends State<DispatchOfferModal> with SingleTick
                 ),
                 const SizedBox(height: 18),
 
-                // Cargo Details Pill
+                // Dispatch Mode Badge (Only Driver vs Vehicle With Driver)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: DriverTheme.crimsonTint,
+                    color: widget.offer.dispatchMode == 'only_driver'
+                        ? const Color(0xFF0284C7).withAlpha(25)
+                        : DriverTheme.crimsonTint,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: DriverTheme.crimsonRed.withAlpha(60)),
+                    border: Border.all(
+                      color: widget.offer.dispatchMode == 'only_driver'
+                          ? const Color(0xFF0284C7)
+                          : DriverTheme.crimsonRed.withAlpha(80),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.inventory_2_outlined, size: 16, color: DriverTheme.crimsonRed),
-                      const SizedBox(width: 8),
+                      Icon(
+                        widget.offer.dispatchMode == 'only_driver'
+                            ? Icons.person_pin_circle_outlined
+                            : Icons.local_shipping_outlined,
+                        size: 20,
+                        color: widget.offer.dispatchMode == 'only_driver'
+                            ? const Color(0xFF0369A1)
+                            : DriverTheme.crimsonDark,
+                      ),
+                      const SizedBox(width: 10),
                       Expanded(
-                        child: Text(
-                          '${widget.offer.cargoType} • ${widget.offer.weightKg} kg',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: DriverTheme.crimsonDark,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.offer.dispatchMode == 'only_driver'
+                                  ? 'OWNER FLEET LORRY PROVIDED (ONLY DRIVER)'
+                                  : 'COMMERCIAL VEHICLE WITH DRIVER REQUIRED',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w900,
+                                color: widget.offer.dispatchMode == 'only_driver'
+                                    ? const Color(0xFF0369A1)
+                                    : DriverTheme.crimsonDark,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Consignment: ${widget.offer.cargoType} • ${widget.offer.weightTons.toStringAsFixed(1)} Tons Luggage',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: DriverTheme.deepBlack,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 18),
+                if (widget.offer.ownerName != null || widget.offer.ownerPhone != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: DriverTheme.warmCream,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: DriverTheme.borderSubtle),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.business, size: 16, color: DriverTheme.textMuted),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Fleet Owner: ${widget.offer.ownerName ?? "HAMHA Fleet HQ"} (${widget.offer.ownerPhone ?? "+91 98200 11223"})',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: DriverTheme.textDark),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 14),
 
                 // Pickup & Drop-off Route Map Points
                 Container(

@@ -18,6 +18,25 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
   bool _fastagExpressways = true;
   bool _dailyPayouts = true;
 
+  Map<String, dynamic>? _fleetOwner;
+  bool _isLoadingOwner = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFleetOwner();
+  }
+
+  Future<void> _loadFleetOwner() async {
+    final owner = await DriverApiService().fetchFleetOwnerContact();
+    if (mounted) {
+      setState(() {
+        _fleetOwner = owner;
+        _isLoadingOwner = false;
+      });
+    }
+  }
+
   void _handleLogout() {
     showDialog(
       context: context,
@@ -286,7 +305,245 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
             ),
             const SizedBox(height: 20),
 
-            // 2. VEHICLE & FLEET ASSET SPECIFICATIONS
+            // 2. ASSIGNED FLEET OWNER & DEPOT HQ
+            _buildSectionHeader('Assigned Fleet Owner & Depot HQ', Icons.business_outlined),
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: DriverTheme.crispWhite,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: DriverTheme.borderSubtle, width: 1.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(8),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: _isLoadingOwner
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: CircularProgressIndicator(color: DriverTheme.crimsonRed),
+                      ),
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: DriverTheme.crimsonTint,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(Icons.shield, color: DriverTheme.crimsonRed, size: 22),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _fleetOwner?['name'] ?? 'Rajesh Singhania',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w900,
+                                      color: DriverTheme.deepBlack,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _fleetOwner?['companyName'] ?? 'HAMHA Logistics Pvt Ltd',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: DriverTheme.textMuted,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: DriverTheme.statusOnline.withAlpha(20),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: DriverTheme.statusOnline),
+                              ),
+                              child: const Text(
+                                'ACTIVE HQ',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                  color: DriverTheme.statusOnline,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        const Divider(color: DriverTheme.borderSubtle, height: 1),
+                        const SizedBox(height: 14),
+
+                        // Owner Primary Mobile Number
+                        Row(
+                          children: [
+                            const Icon(Icons.phone, color: DriverTheme.crimsonRed, size: 18),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'OWNER PRIMARY MOBILE',
+                                    style: TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: DriverTheme.textMuted,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _fleetOwner?['phone'] ?? '+91 98200 11223',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w900,
+                                      color: DriverTheme.deepBlack,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.copy, size: 18, color: DriverTheme.textMuted),
+                              tooltip: 'Copy Primary Phone',
+                              onPressed: () {
+                                final p = _fleetOwner?['phone'] ?? '+91 98200 11223';
+                                Clipboard.setData(ClipboardData(text: p));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Owner number copied: $p'),
+                                    backgroundColor: DriverTheme.statusOnline,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        const Divider(color: DriverTheme.borderSubtle, height: 1),
+                        const SizedBox(height: 10),
+
+                        // Owner Alternative Mobile Number
+                        Row(
+                          children: [
+                            const Icon(Icons.phone_forwarded, color: Color(0xFF2563EB), size: 18),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'OWNER ALTERNATIVE NUMBER',
+                                    style: TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: DriverTheme.textMuted,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _fleetOwner?['alternativePhone'] ?? '+91 98200 99887',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w900,
+                                      color: DriverTheme.deepBlack,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.copy, size: 18, color: DriverTheme.textMuted),
+                              tooltip: 'Copy Alternative Phone',
+                              onPressed: () {
+                                final alt = _fleetOwner?['alternativePhone'] ?? '+91 98200 99887';
+                                Clipboard.setData(ClipboardData(text: alt));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Owner alternative number copied: $alt'),
+                                    backgroundColor: DriverTheme.statusOnline,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        const Divider(color: DriverTheme.borderSubtle, height: 1),
+                        const SizedBox(height: 10),
+
+                        // Owner Office & Depot Address
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.location_city, color: DriverTheme.crimsonRed, size: 18),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'OWNER OFFICE / DEPOT ADDRESS',
+                                    style: TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: DriverTheme.textMuted,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _fleetOwner?['officeAddress'] ??
+                                        'HAMHA Freight HQ, Plot 14, Bhiwandi Logistics Corridor, Thane, MH 421302',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: DriverTheme.deepBlack,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.copy, size: 18, color: DriverTheme.textMuted),
+                              tooltip: 'Copy Office Address',
+                              onPressed: () {
+                                final addr = _fleetOwner?['officeAddress'] ??
+                                    'HAMHA Freight HQ, Plot 14, Bhiwandi Logistics Corridor, Thane, MH 421302';
+                                Clipboard.setData(ClipboardData(text: addr));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Office address copied to clipboard!'),
+                                    backgroundColor: DriverTheme.statusOnline,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+            ),
+            const SizedBox(height: 20),
+
+            // 3. VEHICLE & FLEET ASSET SPECIFICATIONS
             _buildSectionHeader('Assigned Vehicle & Telematics', Icons.local_shipping),
             Container(
               padding: const EdgeInsets.all(18),

@@ -9,6 +9,12 @@ router.get('/truck-requirements', optionalAuthenticateJWT, adminController.getOw
 router.put('/truck-requirements/:id', optionalAuthenticateJWT, adminController.updateTruckRequirement);
 router.delete('/truck-requirements/:id', optionalAuthenticateJWT, adminController.deleteTruckRequirement);
 
+// Owner Profile & Fleet HQ Management
+router.get('/owner-profile', optionalAuthenticateJWT, adminController.getOwnerProfile);
+router.patch('/owner-profile', optionalAuthenticateJWT, adminController.updateOwnerProfile);
+router.get('/vehicles', optionalAuthenticateJWT, adminController.getOwnerVehicles);
+router.post('/vehicles', optionalAuthenticateJWT, adminController.addOwnerVehicle);
+
 // Dispatch Management & Direct Driver Requests (Seamless fallback for authorized & demo owner sessions)
 router.get('/orders', optionalAuthenticateJWT, adminController.getAllOrders);
 router.post('/orders/dispatch', optionalAuthenticateJWT, adminController.manualDispatch);

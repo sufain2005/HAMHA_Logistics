@@ -490,4 +490,49 @@ exports.getDeliveredOrders = async (req, res, next) => {
   }
 };
 
+/**
+ * DRIVER: Get Assigned Fleet Owner & Depot HQ Contact Info
+ */
+exports.getFleetOwner = async (req, res, next) => {
+  try {
+    const ownerRes = await query(
+      `SELECT id, name, phone, alternative_phone, office_address, company_name, email
+       FROM users 
+       WHERE role = 'admin' 
+       ORDER BY created_at ASC 
+       LIMIT 1`
+    );
+
+    if (ownerRes.rows.length === 0) {
+      return res.json({
+        success: true,
+        owner: {
+          name: 'Rajesh Singhania',
+          companyName: 'HAMHA Logistics Pvt Ltd',
+          phone: '+91 98200 11223',
+          alternativePhone: '+91 98200 99887',
+          officeAddress: 'HAMHA Freight HQ, Plot 14, Bhiwandi Logistics Corridor, Thane, MH 421302',
+          email: 'admin@hamha.com',
+        },
+      });
+    }
+
+    const row = ownerRes.rows[0];
+    return res.json({
+      success: true,
+      owner: {
+        id: row.id,
+        name: row.name || 'Rajesh Singhania',
+        companyName: row.company_name || 'HAMHA Logistics Pvt Ltd',
+        phone: row.phone || '+91 98200 11223',
+        alternativePhone: row.alternative_phone || '+91 98200 99887',
+        officeAddress: row.office_address || 'HAMHA Freight HQ, Plot 14, Bhiwandi Logistics Corridor, Thane, MH 421302',
+        email: row.email,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 

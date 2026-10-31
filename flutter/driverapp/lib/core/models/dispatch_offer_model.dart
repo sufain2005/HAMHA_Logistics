@@ -3,6 +3,8 @@ class DispatchOfferModel {
   final String orderCode;
   final String cargoType;
   final double weightKg;
+  final double weightTons;
+  final String dispatchMode; // 'only_driver' or 'vehicle_with_driver'
   final String pickupAddress;
   final String pickupDistrict;
   final double pickupLon;
@@ -16,12 +18,18 @@ class DispatchOfferModel {
   final double distanceKm;
   final int estimatedDurationMin;
   final int expiresInSeconds;
+  final String? ownerName;
+  final String? ownerPhone;
+  final String? ownerAltPhone;
+  final String? ownerOfficeAddress;
 
   const DispatchOfferModel({
     required this.id,
     required this.orderCode,
     required this.cargoType,
     required this.weightKg,
+    this.weightTons = 5.0,
+    this.dispatchMode = 'vehicle_with_driver',
     required this.pickupAddress,
     required this.pickupDistrict,
     required this.pickupLon,
@@ -35,27 +43,50 @@ class DispatchOfferModel {
     required this.distanceKm,
     required this.estimatedDurationMin,
     this.expiresInSeconds = 15,
+    this.ownerName,
+    this.ownerPhone,
+    this.ownerAltPhone,
+    this.ownerOfficeAddress,
   });
 
   factory DispatchOfferModel.fromJson(Map<String, dynamic> json) {
+    final wKg = (json['weight_kg'] as num?)?.toDouble() ??
+        (json['weightKg'] as num?)?.toDouble() ??
+        38.5;
+    final wTons = (json['weight_tons'] as num?)?.toDouble() ??
+        (json['weightTons'] as num?)?.toDouble() ??
+        (wKg / 1000.0);
+
     return DispatchOfferModel(
-      id: json['id'] ?? 'ord-demo-01',
-      orderCode: json['order_code'] ?? 'HMH-89241',
-      cargoType: json['cargo_type'] ?? 'Industrial Electronics',
-      weightKg: (json['weight_kg'] as num?)?.toDouble() ?? 38.5,
-      pickupAddress: json['pickup_address'] ?? 'Godown 4, Bhiwandi Logistics Corridor, Thane',
+      id: json['id'] ?? json['orderId'] ?? 'ord-demo-01',
+      orderCode: json['order_code'] ?? json['orderCode'] ?? 'HMH-89241',
+      cargoType: json['cargo_type'] ?? json['cargoType'] ?? 'Industrial Electronics',
+      weightKg: wKg,
+      weightTons: wTons > 0 ? wTons : 5.0,
+      dispatchMode: json['dispatch_mode'] ?? json['dispatchMode'] ?? 'vehicle_with_driver',
+      pickupAddress: json['pickup_address'] ?? json['pickupAddress'] ?? 'Godown 4, Bhiwandi Logistics Corridor, Thane',
       pickupDistrict: json['pickup_district'] ?? 'Thane',
       pickupLon: (json['pickup_lon'] as num?)?.toDouble() ?? 73.0483,
       pickupLat: (json['pickup_lat'] as num?)?.toDouble() ?? 19.2813,
-      dropoffAddress: json['dropoff_address'] ?? 'Tower B, Bandra Kurla Complex (BKC), Mumbai',
+      dropoffAddress: json['dropoff_address'] ?? json['dropoffAddress'] ?? 'Tower B, Bandra Kurla Complex (BKC), Mumbai',
       dropoffDistrict: json['dropoff_district'] ?? 'Mumbai Suburban',
       dropoffLon: (json['dropoff_lon'] as num?)?.toDouble() ?? 72.8679,
       dropoffLat: (json['dropoff_lat'] as num?)?.toDouble() ?? 19.0657,
-      payoutAmount: (json['payout_amount'] as num?)?.toDouble() ?? 1850.0,
+      payoutAmount: (json['payout_amount'] as num?)?.toDouble() ??
+          (json['payoutAmount'] as num?)?.toDouble() ??
+          (json['fare_amount'] as num?)?.toDouble() ??
+          (json['fareAmount'] as num?)?.toDouble() ??
+          1850.0,
       currency: json['currency'] ?? 'INR',
-      distanceKm: (json['distance_km'] as num?)?.toDouble() ?? 24.6,
+      distanceKm: (json['distance_km'] as num?)?.toDouble() ??
+          (json['distanceKm'] as num?)?.toDouble() ??
+          24.6,
       estimatedDurationMin: json['estimated_duration_min'] ?? 42,
-      expiresInSeconds: json['expires_in_seconds'] ?? 15,
+      expiresInSeconds: json['expires_in_seconds'] ?? 20,
+      ownerName: json['ownerName'] ?? json['owner_name'],
+      ownerPhone: json['ownerPhone'] ?? json['owner_phone'],
+      ownerAltPhone: json['ownerAltPhone'] ?? json['owner_alt_phone'],
+      ownerOfficeAddress: json['ownerOfficeAddress'] ?? json['owner_office_address'],
     );
   }
 
