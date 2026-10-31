@@ -5,6 +5,7 @@ import '../constants/app_constants.dart';
 import '../models/user_model.dart';
 import '../models/quote_model.dart';
 import '../models/order_model.dart';
+import '../models/owner_corridor_route_model.dart';
 
 class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
@@ -404,6 +405,48 @@ class ApiClient {
     );
   }
 
+  // ==========================================
+  // OWNER CORRIDOR MATCHING (LONG DISTANCE & >20KG)
+  // ==========================================
+
+  Future<List<OwnerCorridorRouteModel>> fetchMatchingOwnerCorridors({
+    required double weightKg,
+    required double distanceKm,
+    String? pickupState,
+    String? pickupCity,
+    String? dropoffState,
+    String? dropoffCity,
+  }) async {
+    if (weightKg <= 20) return [];
+
+    try {
+      final queryParams = <String, String>{
+        'weightKg': weightKg.toString(),
+        'distanceKm': distanceKm.toString(),
+        if (pickupState != null && pickupState.isNotEmpty) 'pickupState': pickupState,
+        if (pickupCity != null && pickupCity.isNotEmpty) 'pickupCity': pickupCity,
+        if (dropoffState != null && dropoffState.isNotEmpty) 'dropoffState': dropoffState,
+        if (dropoffCity != null && dropoffCity.isNotEmpty) 'dropoffCity': dropoffCity,
+      };
+
+      final uri = Uri.parse('${AppConstants.baseUrl}/customer/owner-corridors').replace(queryParameters: queryParams);
+      final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        if (data['corridors'] is List) {
+          final list = (data['corridors'] as List)
+              .map((c) => OwnerCorridorRouteModel.fromJson(c as Map<String, dynamic>))
+              .toList();
+          return list;
+        }
+      }
+    } catch (e) {
+      debugPrint('ℹ️ [Customer API] Error querying owner corridors: $e');
+    }
+    return [];
+  }
+
   Future<Map<String, dynamic>> createOrder({
     required String cargoType,
     required double weightKg,
@@ -421,6 +464,8 @@ class ApiClient {
     double? fareAmount,
     double? distanceKm,
     String vehicleType = 'van',
+    String? ownerRequirementId,
+    double? appliedFare,
   }) async {
     try {
       final response = await http
@@ -442,6 +487,8 @@ class ApiClient {
               'senderContactName': senderContactName,
               'senderContactPhone': senderContactPhone,
               'vehicleType': vehicleType,
+              'ownerRequirementId': ownerRequirementId,
+              'appliedFare': appliedFare,
             }),
           )
           .timeout(const Duration(seconds: 4));

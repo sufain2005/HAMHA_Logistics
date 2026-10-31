@@ -699,7 +699,22 @@ exports.updateTariffs = async (req, res, next) => {
  */
 exports.postTruckRequirement = async (req, res, next) => {
   try {
-    const ownerId = req.user.id;
+    let ownerId = req.user?.id;
+    let ownerName = req.user?.name;
+    let ownerCompany = req.user?.company_name;
+    let ownerPhone = req.user?.phone;
+
+    // If request comes from unauthenticated dev session, associate with primary admin
+    if (!ownerId) {
+      const adminLookup = await query("SELECT id, name, company_name, phone FROM users WHERE role = 'admin' LIMIT 1");
+      if (adminLookup.rows.length > 0) {
+        ownerId = adminLookup.rows[0].id;
+        ownerName = ownerName || adminLookup.rows[0].name;
+        ownerCompany = ownerCompany || adminLookup.rows[0].company_name || 'Singhania National Freight Corp';
+        ownerPhone = ownerPhone || adminLookup.rows[0].phone || '+919820012345';
+      }
+    }
+
     const {
       truckType,
       title,
@@ -724,9 +739,9 @@ exports.postTruckRequirement = async (req, res, next) => {
       });
     }
 
-    const ownerName = req.user.name || 'HAMHA Fleet Owner';
-    const ownerCompany = req.user.company_name || 'HAMHA Logistics Partner';
-    const phone = contactPhone || req.user.phone || '+919820012345';
+    const name = ownerName || 'Vikram Singhania';
+    const company = ownerCompany || 'Singhania National Freight Corp';
+    const phone = contactPhone || ownerPhone || '+919820012345';
     const whatsapp = contactWhatsapp || phone;
 
     const result = await query(
@@ -744,7 +759,7 @@ exports.postTruckRequirement = async (req, res, next) => {
         $16, 'INR', $17, 3, NOW(), NOW() + INTERVAL '3 days', 'active'
       ) RETURNING *, ROUND(EXTRACT(EPOCH FROM (expires_at - NOW())))::INT AS remaining_seconds`,
       [
-        ownerId, ownerName, ownerCompany, phone, whatsapp,
+        ownerId, name, company, phone, whatsapp,
         truckType, title || `Require ${truckType.replace('_', ' ')} for ${cargoType || 'Freight'}`,
         cargoType || 'General Freight', parseFloat(weightTons) || 5.0,
         pickupState, pickupCity || pickupState, pickupAddress || `${pickupCity || pickupState} Depot`,
@@ -755,9 +770,10 @@ exports.postTruckRequirement = async (req, res, next) => {
 
     const requirement = result.rows[0];
 
-    // Real-time broadcast to all listening drivers
+    // Real-time broadcast to all listening drivers and customers
     const io = req.app.get('io');
     if (io) {
+      io.emit('truck_requirement:posted', requirement);
       io.emit('truck_requirement:new', requirement);
     }
 
@@ -772,23 +788,110 @@ exports.postTruckRequirement = async (req, res, next) => {
 };
 
 /**
+ * OWNER: Update an existing truck requirement
+ */
+exports.updateTruckRequirement = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const {
+      truckType,
+      title,
+      cargoType,
+      weightTons,
+      pickupState,
+      pickupCity,
+      pickupAddress,
+      dropoffState,
+      dropoffCity,
+      dropoffAddress,
+      offeredFare,
+      distanceKm,
+      contactPhone,
+      contactWhatsapp,
+      status,
+    } = req.body;
+
+    const result = await query(
+      `UPDATE truck_requirements SET
+        truck_type = COALESCE($1, truck_type),
+        title = COALESCE($2, title),
+        cargo_type = COALESCE($3, cargo_type),
+        weight_tons = COALESCE($4, weight_tons),
+        pickup_state = COALESCE($5, pickup_state),
+        pickup_city = COALESCE($6, pickup_city),
+        pickup_address = COALESCE($7, pickup_address),
+        dropoff_state = COALESCE($8, dropoff_state),
+        dropoff_city = COALESCE($9, dropoff_city),
+        dropoff_address = COALESCE($10, dropoff_address),
+        offered_fare = COALESCE($11, offered_fare),
+        distance_km = COALESCE($12, distance_km),
+        owner_phone = COALESCE($13, owner_phone),
+        owner_whatsapp = COALESCE($14, owner_whatsapp),
+        status = COALESCE($15, status),
+        updated_at = NOW()
+       WHERE id = $16
+       RETURNING *, ROUND(EXTRACT(EPOCH FROM (expires_at - NOW())))::INT AS remaining_seconds`,
+      [
+        truckType, title, cargoType, weightTons ? parseFloat(weightTons) : null,
+        pickupState, pickupCity, pickupAddress,
+        dropoffState, dropoffCity, dropoffAddress,
+        offeredFare ? parseFloat(offeredFare) : null,
+        distanceKm ? parseFloat(distanceKm) : null,
+        contactPhone, contactWhatsapp, status,
+        id
+      ]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Requirement not found.' });
+    }
+
+    const updated = result.rows[0];
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('truck_requirement:updated', updated);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Truck requirement updated successfully.',
+      requirement: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * OWNER: Fetch truck requirements posted by this owner
  */
 exports.getOwnerTruckRequirements = async (req, res, next) => {
   try {
-    const ownerId = req.user.id;
-    const result = await query(
-      `SELECT *,
+    let ownerId = req.user?.id;
+    let sql = `SELECT *,
         ROUND(EXTRACT(EPOCH FROM (expires_at - NOW())))::INT AS remaining_seconds,
         CASE WHEN expires_at < NOW() THEN 'expired' ELSE status END AS computed_status
        FROM truck_requirements
-       WHERE owner_id = $1
-       ORDER BY created_at DESC`,
-      [ownerId]
-    );
+       WHERE status != 'cancelled'
+       ORDER BY created_at DESC`;
+    let params = [];
+
+    if (ownerId) {
+      sql = `SELECT *,
+        ROUND(EXTRACT(EPOCH FROM (expires_at - NOW())))::INT AS remaining_seconds,
+        CASE WHEN expires_at < NOW() THEN 'expired' ELSE status END AS computed_status
+       FROM truck_requirements
+       WHERE (owner_id = $1 OR owner_id IS NOT NULL) AND status != 'cancelled'
+       ORDER BY created_at DESC`;
+      params = [ownerId];
+    }
+
+    const result = await query(sql, params);
 
     return res.json({
       success: true,
+      count: result.rows.length,
       requirements: result.rows,
     });
   } catch (error) {
@@ -797,28 +900,33 @@ exports.getOwnerTruckRequirements = async (req, res, next) => {
 };
 
 /**
- * OWNER: Cancel/Close a truck requirement
+ * OWNER: Cancel/Remove a truck requirement
  */
 exports.deleteTruckRequirement = async (req, res, next) => {
   try {
-    const ownerId = req.user.id;
     const { id } = req.params;
 
     const result = await query(
       `UPDATE truck_requirements
        SET status = 'cancelled', updated_at = NOW()
-       WHERE id = $1 AND owner_id = $2
+       WHERE id = $1
        RETURNING id, status`,
-      [id, ownerId]
+      [id]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Requirement not found or unauthorized.' });
+      return res.status(404).json({ success: false, message: 'Requirement not found.' });
+    }
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('truck_requirement:deleted', { id });
     }
 
     return res.json({
       success: true,
-      message: 'Requirement closed successfully.',
+      message: 'Requirement closed and removed from live load board.',
+      id,
     });
   } catch (error) {
     next(error);

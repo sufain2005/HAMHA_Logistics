@@ -946,7 +946,61 @@ class AdminApiClient {
               'contactWhatsapp': contactWhatsapp,
             }),
           )
-          .timeout(const Duration(seconds: 4));
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        if (data['requirement'] != null) {
+          return OwnerTruckRequirementModel.fromJson(data['requirement']);
+        }
+      } else {
+        debugPrint('⚠️ [Admin API] Post requirement failed: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('⚠️ [Admin API] Error posting truck requirement: $e');
+    }
+    return null;
+  }
+
+  Future<OwnerTruckRequirementModel?> updateTruckRequirement({
+    required String id,
+    String? truckType,
+    String? title,
+    String? cargoType,
+    double? weightTons,
+    String? pickupState,
+    String? pickupCity,
+    String? pickupAddress,
+    String? dropoffState,
+    String? dropoffCity,
+    String? dropoffAddress,
+    double? offeredFare,
+    double? distanceKm,
+    String? status,
+  }) async {
+    try {
+      final body = <String, dynamic>{};
+      if (truckType != null) body['truckType'] = truckType;
+      if (title != null) body['title'] = title;
+      if (cargoType != null) body['cargoType'] = cargoType;
+      if (weightTons != null) body['weightTons'] = weightTons;
+      if (pickupState != null) body['pickupState'] = pickupState;
+      if (pickupCity != null) body['pickupCity'] = pickupCity;
+      if (pickupAddress != null) body['pickupAddress'] = pickupAddress;
+      if (dropoffState != null) body['dropoffState'] = dropoffState;
+      if (dropoffCity != null) body['dropoffCity'] = dropoffCity;
+      if (dropoffAddress != null) body['dropoffAddress'] = dropoffAddress;
+      if (offeredFare != null) body['offeredFare'] = offeredFare;
+      if (distanceKm != null) body['distanceKm'] = distanceKm;
+      if (status != null) body['status'] = status;
+
+      final response = await http
+          .put(
+            Uri.parse('${AdminConstants.baseUrl}/admin/truck-requirements/$id'),
+            headers: _headers,
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
@@ -954,33 +1008,10 @@ class AdminApiClient {
           return OwnerTruckRequirementModel.fromJson(data['requirement']);
         }
       }
-    } catch (_) {}
-
-    final now = DateTime.now();
-    return OwnerTruckRequirementModel(
-      id: 'REQ-NEW-${DateTime.now().millisecondsSinceEpoch % 10000}',
-      ownerId: 'own-current',
-      ownerName: 'Vikram Singhania',
-      ownerCompany: 'Singhania National Freight Corp',
-      ownerPhone: contactPhone ?? '+919820012345',
-      ownerWhatsapp: contactWhatsapp ?? '+919820012345',
-      truckType: truckType,
-      title: title,
-      cargoType: cargoType,
-      weightTons: weightTons,
-      pickupState: pickupState,
-      pickupCity: pickupCity,
-      pickupAddress: pickupAddress,
-      dropoffState: dropoffState,
-      dropoffCity: dropoffCity,
-      dropoffAddress: dropoffAddress,
-      offeredFare: offeredFare,
-      distanceKm: distanceKm,
-      validityDays: 3,
-      postedAt: now,
-      expiresAt: now.add(const Duration(days: 3)),
-      remainingSeconds: (const Duration(days: 3)).inSeconds,
-    );
+    } catch (e) {
+      debugPrint('⚠️ [Admin API] Error updating truck requirement: $e');
+    }
+    return null;
   }
 
   Future<List<OwnerTruckRequirementModel>> fetchOwnerTruckRequirements() async {
@@ -990,16 +1021,19 @@ class AdminApiClient {
             Uri.parse('${AdminConstants.baseUrl}/admin/truck-requirements'),
             headers: _headers,
           )
-          .timeout(const Duration(seconds: 4));
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
         final List list = data['requirements'] ?? [];
         return list.map((item) => OwnerTruckRequirementModel.fromJson(item)).toList();
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('ℹ️ [Admin API] Error fetching owner requirements: $e');
+    }
 
-    return OwnerTruckRequirementModel.sampleOwnerRequirements();
+    // Strictly real database data: Return empty list if no postings exist
+    return [];
   }
 
   Future<bool> cancelTruckRequirement(String id) async {
@@ -1009,11 +1043,13 @@ class AdminApiClient {
             Uri.parse('${AdminConstants.baseUrl}/admin/truck-requirements/$id'),
             headers: _headers,
           )
-          .timeout(const Duration(seconds: 4));
+          .timeout(const Duration(seconds: 5));
 
       return response.statusCode >= 200 && response.statusCode < 300;
-    } catch (_) {}
-    return true;
+    } catch (e) {
+      debugPrint('⚠️ [Admin API] Error cancelling truck requirement: $e');
+      return false;
+    }
   }
 }
 

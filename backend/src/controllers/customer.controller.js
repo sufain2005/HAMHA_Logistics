@@ -129,6 +129,8 @@ exports.createOrder = async (req, res, next) => {
       dropoffLat,
       dropoffContactName,
       dropoffContactPhone,
+      ownerRequirementId,
+      appliedFare,
     } = req.body;
 
     if (!cargoType || !weightKg || !pickupAddress || !dropoffAddress || !pickupLon || !pickupLat || !dropoffLon || !dropoffLat) {
@@ -150,8 +152,30 @@ exports.createOrder = async (req, res, next) => {
     const straightLineKm = parseFloat(distanceResult.rows[0].distance_km) || 1.0;
     const distanceKm = Math.round((straightLineKm * 1.3) * 10) / 10;
     const durationMin = Math.round((distanceKm / 35.0) * 60) + 15;
-    const fare = Math.round(((15.0 + (distanceKm * 1.85) + Math.max(0, parseFloat(weightKg) - 5) * 0.75) * 1.08) * 100) / 100;
+    
+    // Calculate default fare or use owner corridor applied fare
+    let calculatedFare = Math.round(((15.0 + (distanceKm * 1.85) + Math.max(0, parseFloat(weightKg) - 5) * 0.75) * 1.08) * 100) / 100;
+    if (appliedFare && parseFloat(appliedFare) > 0) {
+      calculatedFare = Math.round(parseFloat(appliedFare) * 100) / 100;
+    }
     const orderCode = generateOrderCode();
+
+    let finalDescription = packageDescription || '';
+    let ownerInfo = null;
+
+    if (ownerRequirementId) {
+      try {
+        const ownerReqResult = await query(
+          `SELECT * FROM truck_requirements WHERE id = $1`,
+          [ownerRequirementId]
+        );
+        if (ownerReqResult.rows.length > 0) {
+          ownerInfo = ownerReqResult.rows[0];
+          const tag = `[OWNER CORRIDOR BOOKED]: Req #${ownerRequirementId.slice(0, 8)} (${ownerInfo.owner_company || ownerInfo.owner_name}) | Route: ${ownerInfo.pickup_city} -> ${ownerInfo.dropoff_city} | Vehicle: ${ownerInfo.truck_type}`;
+          finalDescription = finalDescription ? `${finalDescription}\n${tag}` : tag;
+        }
+      } catch (_) {}
+    }
 
     const result = await query(
       `INSERT INTO orders (
@@ -166,10 +190,10 @@ exports.createOrder = async (req, res, next) => {
         $16, $17, $18, 'pending', 'pending'
       ) RETURNING id, order_code, status, fare_amount, distance_km, estimated_duration_min, created_at`,
       [
-        orderCode, customerId, cargoType, weightKg, packageDescription || '',
+        orderCode, customerId, cargoType, weightKg, finalDescription,
         pickupAddress, pickupLon, pickupLat, pickupContactName || req.user.name, pickupContactPhone || req.user.phone,
         dropoffAddress, dropoffLon, dropoffLat, dropoffContactName || '', dropoffContactPhone || '',
-        fare, distanceKm, durationMin
+        calculatedFare, distanceKm, durationMin
       ]
     );
 
@@ -183,17 +207,33 @@ exports.createOrder = async (req, res, next) => {
         orderCode: newOrder.order_code,
         pickupAddress,
         dropoffAddress,
-        fareAmount: fare,
+        fareAmount: calculatedFare,
         weightKg,
         createdAt: newOrder.created_at,
+        ownerRequirementId: ownerRequirementId || null,
+        ownerCompany: ownerInfo?.owner_company || null,
       });
+
+      if (ownerRequirementId) {
+        io.to('admin:fleet').emit('owner:corridor_consignment_booked', {
+          requirementId: ownerRequirementId,
+          orderId: newOrder.id,
+          orderCode: newOrder.order_code,
+          customerName: req.user.name,
+          pickupAddress,
+          dropoffAddress,
+          weightKg,
+          fareAmount: calculatedFare,
+          ownerCompany: ownerInfo?.owner_company,
+        });
+      }
 
       io.to('drivers:available').emit('dispatch:new_order_available', {
         orderId: newOrder.id,
         orderCode: newOrder.order_code,
         pickupAddress,
         dropoffAddress,
-        fareAmount: fare,
+        fareAmount: calculatedFare,
         distanceKm,
         weightKg,
       });
@@ -203,6 +243,112 @@ exports.createOrder = async (req, res, next) => {
       success: true,
       message: 'Shipment created successfully. Waiting for driver assignment.',
       order: newOrder,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * CUSTOMER: Fetch Active Fleet Owner Added Routes / Corridors
+ * ONLY activated for long-distance (district-to-district, state-to-state, distance >= 50km)
+ * and weight > 20 kg.
+ */
+exports.getMatchingOwnerCorridors = async (req, res, next) => {
+  try {
+    const {
+      pickupState,
+      pickupCity,
+      dropoffState,
+      dropoffCity,
+      weightKg = 0,
+      distanceKm = 0,
+    } = req.query;
+
+    const parsedWeight = parseFloat(weightKg) || 0;
+    const parsedDistance = parseFloat(distanceKm) || 0;
+
+    // Strict requirement: Must be > 20kg
+    if (parsedWeight <= 20) {
+      return res.json({
+        success: true,
+        eligible: false,
+        message: 'Owner freight corridor booking is reserved for consignments exceeding 20 kg.',
+        corridors: [],
+      });
+    }
+
+    let sql = `
+      SELECT 
+        id, owner_id, owner_name, owner_company, owner_phone, owner_whatsapp,
+        truck_type, title, cargo_type, weight_tons,
+        pickup_state, pickup_city, pickup_address,
+        dropoff_state, dropoff_city, dropoff_address,
+        offered_fare, currency, distance_km, validity_days,
+        posted_at, expires_at, status,
+        GREATEST(0, ROUND(EXTRACT(EPOCH FROM (expires_at - NOW()))))::INT AS remaining_seconds,
+        ROUND(EXTRACT(EPOCH FROM (expires_at - NOW())) / 3600)::INT AS remaining_hours
+      FROM truck_requirements
+      WHERE status = 'active'
+        AND expires_at > NOW()
+        AND (weight_tons * 1000) >= $1
+    `;
+    const params = [parsedWeight];
+
+    const conditions = [];
+    if (pickupState && pickupState.trim().length > 1) {
+      params.push(`%${pickupState.trim()}%`);
+      conditions.push(`pickup_state ILIKE $${params.length}`);
+    }
+    if (dropoffState && dropoffState.trim().length > 1) {
+      params.push(`%${dropoffState.trim()}%`);
+      conditions.push(`dropoff_state ILIKE $${params.length}`);
+    }
+    if (pickupCity && pickupCity.trim().length > 1) {
+      params.push(`%${pickupCity.trim()}%`);
+      conditions.push(`pickup_city ILIKE $${params.length}`);
+    }
+    if (dropoffCity && dropoffCity.trim().length > 1) {
+      params.push(`%${dropoffCity.trim()}%`);
+      conditions.push(`dropoff_city ILIKE $${params.length}`);
+    }
+
+    if (conditions.length > 0) {
+      sql += ` AND (${conditions.join(' OR ')})`;
+    }
+
+    sql += ` ORDER BY expires_at ASC LIMIT 10`;
+
+    let result = await query(sql, params);
+
+    // If specific corridor search yielded 0, provide other active long-distance heavy truck broadcasts
+    if (result.rows.length === 0) {
+      const fallbackResult = await query(
+        `SELECT 
+          id, owner_id, owner_name, owner_company, owner_phone, owner_whatsapp,
+          truck_type, title, cargo_type, weight_tons,
+          pickup_state, pickup_city, pickup_address,
+          dropoff_state, dropoff_city, dropoff_address,
+          offered_fare, currency, distance_km, validity_days,
+          posted_at, expires_at, status,
+          GREATEST(0, ROUND(EXTRACT(EPOCH FROM (expires_at - NOW()))))::INT AS remaining_seconds,
+          ROUND(EXTRACT(EPOCH FROM (expires_at - NOW())) / 3600)::INT AS remaining_hours
+        FROM truck_requirements
+        WHERE status = 'active'
+          AND expires_at > NOW()
+          AND (weight_tons * 1000) >= $1
+        ORDER BY distance_km DESC, expires_at ASC
+        LIMIT 10`,
+        [parsedWeight]
+      );
+      result = fallbackResult;
+    }
+
+    return res.json({
+      success: true,
+      eligible: true,
+      count: result.rows.length,
+      corridors: result.rows,
     });
   } catch (error) {
     next(error);

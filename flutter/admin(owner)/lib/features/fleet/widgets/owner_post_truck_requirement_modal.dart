@@ -94,8 +94,15 @@ class _OwnerPostTruckRequirementModalState extends State<OwnerPostTruckRequireme
         setState(() => _activeTab = 1);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Truck requirement broadcasted successfully for 3 days!'),
+            content: Text('Truck requirement broadcasted successfully to drivers for 3 days!'),
             backgroundColor: AdminTheme.statusOnline,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to broadcast requirement to database. Please check connection.'),
+            backgroundColor: AdminTheme.crimsonRed,
           ),
         );
       }
@@ -612,13 +619,20 @@ class _OwnerPostTruckRequirementModalState extends State<OwnerPostTruckRequireme
                   ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.cancel_outlined, size: 20, color: AdminTheme.crimsonRed),
-                tooltip: 'Cancel Posting',
-                onPressed: () async {
-                  await AdminApiClient().cancelTruckRequirement(req.id);
-                  _loadRequirements();
-                },
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, size: 20, color: AdminTheme.deepBlack),
+                    tooltip: 'Edit Requirement Details',
+                    onPressed: () => _showEditRequirementDialog(req),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, size: 20, color: AdminTheme.crimsonRed),
+                    tooltip: 'Remove / Cancel Posting',
+                    onPressed: () => _confirmCancelRequirement(req),
+                  ),
+                ],
               ),
             ],
           ),
@@ -626,4 +640,156 @@ class _OwnerPostTruckRequirementModalState extends State<OwnerPostTruckRequireme
       },
     );
   }
+
+  void _showEditRequirementDialog(OwnerTruckRequirementModel req) {
+    final titleCtrl = TextEditingController(text: req.title);
+    final fareCtrl = TextEditingController(text: req.offeredFare.toStringAsFixed(0));
+    final weightCtrl = TextEditingController(text: req.weightTons.toString());
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDlgState) => AlertDialog(
+          backgroundColor: AdminTheme.crispWhite,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Icon(Icons.edit_note, color: AdminTheme.crimsonRed),
+              SizedBox(width: 8),
+              Text('Update Load Broadcast', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+            ],
+          ),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Corridor Route: ${req.pickupCity} (${req.pickupState}) ➔ ${req.dropoffCity} (${req.dropoffState})',
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: AdminTheme.textMuted),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: titleCtrl,
+                  decoration: const InputDecoration(labelText: 'Consignment Title'),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: fareCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: 'Offered Fare (₹ INR)'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: weightCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: 'Weight (Tons)'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('CANCEL', style: TextStyle(color: AdminTheme.textMuted, fontWeight: FontWeight.bold)),
+            ),
+            ElevatedButton(
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      setDlgState(() => isSaving = true);
+                      final updated = await AdminApiClient().updateTruckRequirement(
+                        id: req.id,
+                        title: titleCtrl.text.trim(),
+                        offeredFare: double.tryParse(fareCtrl.text.trim()) ?? req.offeredFare,
+                        weightTons: double.tryParse(weightCtrl.text.trim()) ?? req.weightTons,
+                      );
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (mounted) {
+                        _loadRequirements();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(updated != null
+                                ? 'Requirement updated in database successfully!'
+                                : 'Failed to update requirement.'),
+                            backgroundColor: updated != null ? AdminTheme.statusOnline : AdminTheme.crimsonRed,
+                          ),
+                        );
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AdminTheme.crimsonRed,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: isSaving
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('SAVE CHANGES', style: TextStyle(fontWeight: FontWeight.w900)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmCancelRequirement(OwnerTruckRequirementModel req) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AdminTheme.crispWhite,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AdminTheme.crimsonRed),
+            SizedBox(width: 8),
+            Text('Remove Load Posting', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to cancel and remove "${req.title}"?\nDrivers searching for work in ${req.pickupState} will immediately no longer see this load broadcast.',
+          style: const TextStyle(fontSize: 13, color: AdminTheme.deepBlack),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('KEEP POSTING', style: TextStyle(color: AdminTheme.textMuted, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final success = await AdminApiClient().cancelTruckRequirement(req.id);
+              if (mounted) {
+                _loadRequirements();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(success
+                        ? 'Load posting cancelled and removed from active board.'
+                        : 'Failed to cancel posting.'),
+                    backgroundColor: success ? AdminTheme.deepBlack : AdminTheme.crimsonRed,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AdminTheme.crimsonRed,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('CONFIRM REMOVE', style: TextStyle(fontWeight: FontWeight.w900)),
+          ),
+        ],
+      ),
+    );
+  }
 }
+

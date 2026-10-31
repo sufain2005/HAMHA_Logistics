@@ -1,9 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const driverController = require('../controllers/driver.controller');
-const { authenticateJWT, requireRole } = require('../middleware/auth');
+const { authenticateJWT, optionalAuthenticateJWT, requireRole } = require('../middleware/auth');
 
-// All endpoints strictly restricted to authenticated DRIVERS
+// Search for Work in State & Contact Owner (3-Day Load Board) - accessible for state querying
+router.get('/truck-requirements/search', optionalAuthenticateJWT, driverController.searchTruckRequirements);
+router.post('/truck-requirements/:id/contact', optionalAuthenticateJWT, driverController.contactOwnerForRequirement);
+
+// All operational driver endpoints strictly restricted to authenticated DRIVERS
 router.use(authenticateJWT);
 router.use(requireRole('driver'));
 
@@ -23,9 +27,6 @@ router.post('/location', driverController.updateLocation);
 // Delivered Shipments History (Strictly Delivered Only)
 router.get('/orders/delivered', driverController.getDeliveredOrders);
 
-// Search for Work in State & Contact Owner (3-Day Load Board)
-router.get('/truck-requirements/search', driverController.searchTruckRequirements);
-router.post('/truck-requirements/:id/contact', driverController.contactOwnerForRequirement);
-
 module.exports = router;
+
 

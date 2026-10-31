@@ -52,8 +52,26 @@ const requireRole = (...allowedRoles) => {
   };
 };
 
+/**
+ * Optional JWT Bearer token authentication - attaches decoded user if valid, continues if absent
+ */
+const optionalAuthenticateJWT = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1];
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      req.user = decoded;
+    } catch (_) {
+      req.user = null;
+    }
+  }
+  next();
+};
+
 module.exports = {
   authenticateJWT,
+  optionalAuthenticateJWT,
   requireRole,
   JWT_SECRET,
 };

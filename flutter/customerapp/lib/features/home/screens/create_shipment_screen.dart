@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/models/quote_model.dart';
+import '../../../core/models/owner_corridor_route_model.dart';
 import '../../../core/network/api_client.dart';
 import '../../tracking/screens/order_tracking_screen.dart';
 
@@ -52,6 +53,19 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
   bool _isCalculating = false;
   bool _isSubmitting = false;
   String? _errorMessage;
+
+  // Active Owner Corridor Routes (> 20kg & Long-Distance routes)
+  List<OwnerCorridorRouteModel> _availableOwnerCorridors = [];
+  bool _isLoadingOwnerCorridors = false;
+  OwnerCorridorRouteModel? _selectedOwnerRoute;
+
+  bool get _isLongDistanceAndHeavy {
+    final w = double.tryParse(_weightController.text.trim()) ?? 0;
+    final isLongDist = _distanceKm >= 50.0 ||
+        _pickupState != _dropoffState ||
+        _pickupCityController.text.trim().toLowerCase() != _dropoffCityController.text.trim().toLowerCase();
+    return w > 20.0 && isLongDist;
+  }
 
   final List<String> _indianStates = [
     'Maharashtra',
@@ -126,6 +140,17 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
 
     _calculateDistance();
 
+    if (_isLongDistanceAndHeavy) {
+      _fetchMatchingOwnerCorridors();
+    } else {
+      if (_availableOwnerCorridors.isNotEmpty || _selectedOwnerRoute != null) {
+        setState(() {
+          _availableOwnerCorridors = [];
+          _selectedOwnerRoute = null;
+        });
+      }
+    }
+
     setState(() {
       _isCalculating = true;
       _errorMessage = null;
@@ -152,6 +177,35 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
       });
     } finally {
       if (mounted) setState(() => _isCalculating = false);
+    }
+  }
+
+  Future<void> _fetchMatchingOwnerCorridors() async {
+    final weight = double.tryParse(_weightController.text.trim()) ?? 0;
+    if (weight <= 20.0) return;
+
+    setState(() => _isLoadingOwnerCorridors = true);
+    try {
+      final corridors = await ApiClient().fetchMatchingOwnerCorridors(
+        weightKg: weight,
+        distanceKm: _distanceKm,
+        pickupState: _pickupState,
+        pickupCity: _pickupCityController.text.trim(),
+        dropoffState: _dropoffState,
+        dropoffCity: _dropoffCityController.text.trim(),
+      );
+
+      if (mounted) {
+        setState(() {
+          _availableOwnerCorridors = corridors;
+          _isLoadingOwnerCorridors = false;
+          if (_selectedOwnerRoute != null && !corridors.any((c) => c.id == _selectedOwnerRoute!.id)) {
+            _selectedOwnerRoute = null;
+          }
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingOwnerCorridors = false);
     }
   }
 
@@ -202,7 +256,8 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
     });
 
     try {
-      final fare = double.tryParse(_currentQuote?.totalFare ?? '3450') ?? 3450.0;
+      final defaultFare = double.tryParse(_currentQuote?.totalFare ?? '3450') ?? 3450.0;
+      final fare = _selectedOwnerRoute != null ? _selectedOwnerRoute!.offeredFare : defaultFare;
 
       final res = await ApiClient().createOrder(
         cargoType: _selectedCargo,
@@ -220,17 +275,23 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
         senderContactPhone: _pickupSenderPhoneController.text.trim(),
         fareAmount: fare,
         distanceKm: _distanceKm,
-        vehicleType: _selectedVehicle,
+        vehicleType: _selectedOwnerRoute != null ? _selectedOwnerRoute!.truckType : _selectedVehicle,
+        ownerRequirementId: _selectedOwnerRoute?.id,
+        appliedFare: _selectedOwnerRoute?.offeredFare,
       );
 
       if (!mounted) return;
 
       final newOrderId = res['order']['id'];
 
+      final successMsg = _selectedOwnerRoute != null
+          ? 'Shipment booked on Owner Corridor (${_selectedOwnerRoute!.ownerCompany})! Heavy commercial driver dispatch initiated.'
+          : 'Shipment booked successfully! Driver dispatch initiated with live GPS tracking.';
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: Color(0xFF059669),
-          content: Text('Shipment booked successfully! Driver dispatch initiated with live GPS tracking.'),
+        SnackBar(
+          backgroundColor: const Color(0xFF059669),
+          content: Text(successMsg),
         ),
       );
 
@@ -699,6 +760,12 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
                   // SECTION 4: REAL-TIME TARIFF BREAKDOWN STRICTLY BY ADMIN PRICING
                   // -----------------------------------------------------------------
                   _buildTariffBreakdownCard(),
+                  const SizedBox(height: 20),
+
+                  // -----------------------------------------------------------------
+                  // SECTION 5: OWNER ADDED CORRIDOR ROUTES (>20KG & LONG DISTANCE)
+                  // -----------------------------------------------------------------
+                  _buildOwnerCorridorsSection(),
                   const SizedBox(height: 24),
 
                   // Booking CTA Button
@@ -716,10 +783,12 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
                         : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.local_shipping, size: 20),
+                              Icon(_selectedOwnerRoute != null ? Icons.verified_user : Icons.local_shipping, size: 20),
                               const SizedBox(width: 10),
                               Text(
-                                'CONFIRM & BOOK SHIPMENT (₹${_currentQuote?.totalFare ?? "---"} INR)',
+                                _selectedOwnerRoute != null
+                                    ? 'CONFIRM & BOOK OWNER ROUTE (₹${_selectedOwnerRoute!.offeredFare.toStringAsFixed(0)} INR)'
+                                    : 'CONFIRM & BOOK SHIPMENT (₹${_currentQuote?.totalFare ?? "---"} INR)',
                                 style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.6),
                               ),
                             ],
@@ -839,6 +908,29 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
             _buildCostLine('Distance Fare (${_distanceKm.toStringAsFixed(0)} KM):', _currentQuote?.breakdown['distanceRate'] ?? '---'),
             _buildCostLine('Weight Charge:', _currentQuote?.breakdown['weightSurcharge'] ?? '₹0'),
             _buildCostLine('Statutory GST (18%):', _currentQuote?.breakdown['gst'] ?? '---'),
+            if (_selectedOwnerRoute != null) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: HamhaTheme.crimsonRed.withAlpha(20),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: HamhaTheme.crimsonRed.withAlpha(60)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.verified, color: HamhaTheme.crimsonRed, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Owner Corridor Rate Applied: ${_selectedOwnerRoute!.ownerCompany} (${_selectedOwnerRoute!.truckTypeDisplayName})',
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: HamhaTheme.crimsonRed),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             const Divider(height: 1, color: HamhaTheme.borderSubtle),
             const SizedBox(height: 12),
@@ -853,12 +945,284 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
                   ],
                 ),
                 Text(
-                  '₹${_currentQuote?.totalFare ?? "---"} INR',
+                  _selectedOwnerRoute != null
+                      ? '₹${_selectedOwnerRoute!.offeredFare.toStringAsFixed(0)} INR'
+                      : '₹${_currentQuote?.totalFare ?? "---"} INR',
                   style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: HamhaTheme.crimsonRed),
                 ),
               ],
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOwnerCorridorsSection() {
+    if (!_isLongDistanceAndHeavy) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: HamhaTheme.crispWhite,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: _selectedOwnerRoute != null ? HamhaTheme.crimsonRed : HamhaTheme.borderSubtle,
+          width: _selectedOwnerRoute != null ? 1.8 : 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: _selectedOwnerRoute != null
+                ? HamhaTheme.crimsonRed.withAlpha(20)
+                : Colors.black.withAlpha(8),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: HamhaTheme.crimsonRed,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.alt_route, color: Colors.white, size: 18),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text(
+                          'Available Fleet Owner Routes',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: HamhaTheme.deepBlack,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: HamhaTheme.crimsonRed.withAlpha(25),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            '> 20 KG CORRIDOR',
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w900,
+                              color: HamhaTheme.crimsonRed,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Long-distance inter-district/state corridor detected. Click an owner\'s active route to book directly with guaranteed fleet capacity.',
+                      style: TextStyle(fontSize: 11.5, color: HamhaTheme.textMuted),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          if (_isLoadingOwnerCorridors)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: CircularProgressIndicator(color: HamhaTheme.crimsonRed, strokeWidth: 2)),
+            )
+          else if (_availableOwnerCorridors.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: HamhaTheme.warmCream,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: HamhaTheme.borderSubtle),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: HamhaTheme.textMuted, size: 20),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'No direct fleet owner route broadcast active on this exact corridor right now. Your consignment will be fulfilled via dynamic regional commercial carrier dispatch.',
+                      style: TextStyle(fontSize: 11.5, color: HamhaTheme.textMuted),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _availableOwnerCorridors.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final route = _availableOwnerCorridors[index];
+                final isSelected = _selectedOwnerRoute?.id == route.id;
+
+                return InkWell(
+                  onTap: () {
+                    setState(() {
+                      if (isSelected) {
+                        _selectedOwnerRoute = null;
+                      } else {
+                        _selectedOwnerRoute = route;
+                        _selectedVehicle = route.truckType;
+                      }
+                    });
+                    _calculateQuote();
+                  },
+                  borderRadius: BorderRadius.circular(14),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: isSelected ? HamhaTheme.crimsonRed.withAlpha(15) : HamhaTheme.warmCream,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isSelected ? HamhaTheme.crimsonRed : HamhaTheme.borderSubtle,
+                        width: isSelected ? 2.0 : 1.0,
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.only(top: 2),
+                          width: 22,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isSelected ? HamhaTheme.crimsonRed : Colors.white,
+                            border: Border.all(
+                              color: isSelected ? HamhaTheme.crimsonRed : HamhaTheme.borderSubtle,
+                              width: 2,
+                            ),
+                          ),
+                          child: isSelected
+                              ? const Icon(Icons.check, size: 14, color: Colors.white)
+                              : null,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      route.ownerCompany,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w900,
+                                        color: HamhaTheme.deepBlack,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: isSelected ? HamhaTheme.crimsonRed : HamhaTheme.deepBlack,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      '₹${route.offeredFare.toStringAsFixed(0)}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(Icons.route, size: 14, color: HamhaTheme.crimsonRed),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      route.routeCorridorText,
+                                      style: const TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: HamhaTheme.deepBlack,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Wrap(
+                                spacing: 8,
+                                children: [
+                                  Text(
+                                    '🚚 ${route.truckTypeDisplayName}',
+                                    style: const TextStyle(fontSize: 10.5, color: HamhaTheme.textMuted),
+                                  ),
+                                  Text(
+                                    '⚖️ ${route.weightTons}T (${(route.weightTons * 1000).toStringAsFixed(0)} kg capacity)',
+                                    style: const TextStyle(fontSize: 10.5, color: HamhaTheme.textMuted),
+                                  ),
+                                  Text(
+                                    '⏳ ${route.remainingTimeFormatted}',
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: isSelected ? HamhaTheme.crimsonRed : HamhaTheme.textMuted,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (isSelected) ...[
+                                const SizedBox(height: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: HamhaTheme.crimsonRed,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Text(
+                                    '✓ APPLIED TO THIS SHIPMENT (CLICK AGAIN TO DESELECT)',
+                                    style: TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
         ],
       ),
     );

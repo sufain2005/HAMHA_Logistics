@@ -375,17 +375,19 @@ class DriverApiService {
       }
       final uri = Uri.parse('${ApiConstants.baseUrl}/driver/truck-requirements/search').replace(queryParameters: queryParams);
 
-      final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 4));
+      final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 5));
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
         final List list = data['requirements'] ?? [];
         return list.map((item) => TruckRequirementModel.fromJson(item)).toList();
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('ℹ️ [Driver API] Error querying real truck requirements: $e');
+    }
 
-    // Resilient fallback with state-matching verified loads
-    return TruckRequirementModel.sampleRequirements(state);
+    // Strictly real data from database: Return empty list if no postings exist
+    return [];
   }
 
   Future<Map<String, dynamic>> contactOwnerForRequirement(

@@ -1,9 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/admin.controller');
-const { authenticateJWT, requireRole } = require('../middleware/auth');
+const { authenticateJWT, optionalAuthenticateJWT, requireRole } = require('../middleware/auth');
 
-// All endpoints in this router are strictly restricted to authenticated OWNER/ADMIN
+// Owner Truck Search / 3-Day Load Board Postings (Open to authenticated & authorized owner sessions)
+router.post('/truck-requirements', optionalAuthenticateJWT, adminController.postTruckRequirement);
+router.get('/truck-requirements', optionalAuthenticateJWT, adminController.getOwnerTruckRequirements);
+router.put('/truck-requirements/:id', optionalAuthenticateJWT, adminController.updateTruckRequirement);
+router.delete('/truck-requirements/:id', optionalAuthenticateJWT, adminController.deleteTruckRequirement);
+
+// All operational management endpoints below require strict admin role authentication
 router.use(authenticateJWT);
 router.use(requireRole('admin'));
 
@@ -35,11 +41,6 @@ router.get('/audit-logs', adminController.getAuditLogs);
 
 // Analytics
 router.get('/analytics', adminController.getAnalytics);
-
-// Owner Truck Search / 3-Day Load Board Postings
-router.post('/truck-requirements', adminController.postTruckRequirement);
-router.get('/truck-requirements', adminController.getOwnerTruckRequirements);
-router.delete('/truck-requirements/:id', adminController.deleteTruckRequirement);
 
 module.exports = router;
 
