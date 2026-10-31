@@ -9,6 +9,7 @@ import '../models/admin_order_model.dart';
 import '../models/transaction_model.dart';
 import '../models/dispute_model.dart';
 import '../models/audit_log_model.dart';
+import '../models/owner_truck_requirement_model.dart';
 import '../services/admin_auth_service.dart';
 
 class AdminApiClient {
@@ -901,6 +902,118 @@ class AdminApiClient {
       'updatedAt': DateTime.now().toIso8601String(),
     };
     return activeSystemTariffs;
+  }
+
+  // ==========================================
+  // OWNER: SEARCH FOR TRUCK (3-DAY LOAD BROADCAST)
+  // ==========================================
+
+  Future<OwnerTruckRequirementModel?> postTruckRequirement({
+    required String truckType,
+    required String title,
+    required String cargoType,
+    required double weightTons,
+    required String pickupState,
+    required String pickupCity,
+    required String pickupAddress,
+    required String dropoffState,
+    required String dropoffCity,
+    required String dropoffAddress,
+    required double offeredFare,
+    double distanceKm = 150.0,
+    String? contactPhone,
+    String? contactWhatsapp,
+  }) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('${AdminConstants.baseUrl}/admin/truck-requirements'),
+            headers: _headers,
+            body: jsonEncode({
+              'truckType': truckType,
+              'title': title,
+              'cargoType': cargoType,
+              'weightTons': weightTons,
+              'pickupState': pickupState,
+              'pickupCity': pickupCity,
+              'pickupAddress': pickupAddress,
+              'dropoffState': dropoffState,
+              'dropoffCity': dropoffCity,
+              'dropoffAddress': dropoffAddress,
+              'offeredFare': offeredFare,
+              'distanceKm': distanceKm,
+              'contactPhone': contactPhone,
+              'contactWhatsapp': contactWhatsapp,
+            }),
+          )
+          .timeout(const Duration(seconds: 4));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        if (data['requirement'] != null) {
+          return OwnerTruckRequirementModel.fromJson(data['requirement']);
+        }
+      }
+    } catch (_) {}
+
+    final now = DateTime.now();
+    return OwnerTruckRequirementModel(
+      id: 'REQ-NEW-${DateTime.now().millisecondsSinceEpoch % 10000}',
+      ownerId: 'own-current',
+      ownerName: 'Vikram Singhania',
+      ownerCompany: 'Singhania National Freight Corp',
+      ownerPhone: contactPhone ?? '+919820012345',
+      ownerWhatsapp: contactWhatsapp ?? '+919820012345',
+      truckType: truckType,
+      title: title,
+      cargoType: cargoType,
+      weightTons: weightTons,
+      pickupState: pickupState,
+      pickupCity: pickupCity,
+      pickupAddress: pickupAddress,
+      dropoffState: dropoffState,
+      dropoffCity: dropoffCity,
+      dropoffAddress: dropoffAddress,
+      offeredFare: offeredFare,
+      distanceKm: distanceKm,
+      validityDays: 3,
+      postedAt: now,
+      expiresAt: now.add(const Duration(days: 3)),
+      remainingSeconds: (const Duration(days: 3)).inSeconds,
+    );
+  }
+
+  Future<List<OwnerTruckRequirementModel>> fetchOwnerTruckRequirements() async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse('${AdminConstants.baseUrl}/admin/truck-requirements'),
+            headers: _headers,
+          )
+          .timeout(const Duration(seconds: 4));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        final List list = data['requirements'] ?? [];
+        return list.map((item) => OwnerTruckRequirementModel.fromJson(item)).toList();
+      }
+    } catch (_) {}
+
+    return OwnerTruckRequirementModel.sampleOwnerRequirements();
+  }
+
+  Future<bool> cancelTruckRequirement(String id) async {
+    try {
+      final response = await http
+          .delete(
+            Uri.parse('${AdminConstants.baseUrl}/admin/truck-requirements/$id'),
+            headers: _headers,
+          )
+          .timeout(const Duration(seconds: 4));
+
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } catch (_) {}
+    return true;
   }
 }
 

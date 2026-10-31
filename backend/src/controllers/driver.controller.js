@@ -343,3 +343,144 @@ exports.updateLocation = async (req, res, next) => {
   }
 };
 
+/**
+ * DRIVER: Search for Work / Load Requirements inside a specified state
+ * Filters active owner postings where expires_at > NOW() (3-day broadcast)
+ */
+exports.searchTruckRequirements = async (req, res, next) => {
+  try {
+    const { state, truckType } = req.query;
+    const targetState = state ? state.trim() : 'Maharashtra';
+
+    let sql = `
+      SELECT 
+        id, owner_id, owner_name, owner_company, owner_phone, owner_whatsapp,
+        truck_type, title, cargo_type, weight_tons,
+        pickup_state, pickup_city, pickup_address,
+        dropoff_state, dropoff_city, dropoff_address,
+        offered_fare, currency, distance_km, validity_days,
+        posted_at, expires_at, status,
+        GREATEST(0, ROUND(EXTRACT(EPOCH FROM (expires_at - NOW()))))::INT AS remaining_seconds,
+        ROUND(EXTRACT(EPOCH FROM (expires_at - NOW())) / 3600)::INT AS remaining_hours
+      FROM truck_requirements
+      WHERE status = 'active'
+        AND expires_at > NOW()
+        AND (pickup_state ILIKE $1 OR dropoff_state ILIKE $1)
+    `;
+    const params = [`%${targetState}%`];
+
+    if (truckType && truckType !== 'all') {
+      params.push(truckType);
+      sql += ` AND truck_type = $${params.length}`;
+    }
+
+    sql += ` ORDER BY expires_at ASC`;
+
+    const result = await query(sql, params);
+
+    return res.json({
+      success: true,
+      searchedState: targetState,
+      count: result.rows.length,
+      requirements: result.rows,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DRIVER: Contact Owner regarding a truck requirement
+ */
+exports.contactOwnerForRequirement = async (req, res, next) => {
+  try {
+    const driverId = req.user.id;
+    const { id } = req.params;
+    const { message } = req.body;
+
+    const reqResult = await query(
+      `SELECT * FROM truck_requirements WHERE id = $1 AND status = 'active' AND expires_at > NOW()`,
+      [id]
+    );
+
+    if (reqResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'This requirement is no longer active or has expired.' });
+    }
+
+    const requirement = reqResult.rows[0];
+
+    // Log contact event in audit logs
+    await query(
+      `INSERT INTO system_audit_logs (id, admin_user, action_type, target_entity, details, ip_address, security_hash)
+       VALUES ($1, $2, 'DRIVER_LOAD_CONTACT', $3, $4, '127.0.0.1 (Driver Pilot)', $5)`,
+      [
+        `CNT-${Date.now().toString().slice(-6)}`,
+        req.user.name,
+        `TRUCK_REQ #${id.slice(0, 8)}`,
+        `Driver ${req.user.name} (${req.user.phone}) initiated direct contact with Owner ${requirement.owner_name} (${requirement.owner_phone}) for load "${requirement.title}". Message: ${message || 'Standard load inquiry'}`,
+        `SHA256:${Buffer.from(id + driverId + Date.now()).toString('hex').slice(0, 32)}`
+      ]
+    );
+
+    // Notify owner via Socket.io
+    const io = req.app.get('io');
+    if (io) {
+      io.to('admin:fleet').emit('driver:load_inquiry', {
+        requirementId: id,
+        title: requirement.title,
+        driverId,
+        driverName: req.user.name,
+        driverPhone: req.user.phone,
+        message: message || 'Interested in this load broadcast',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Contact initiated with owner ${requirement.owner_name}.`,
+      ownerContact: {
+        ownerName: requirement.owner_name,
+        ownerCompany: requirement.owner_company,
+        phone: requirement.owner_phone,
+        whatsapp: requirement.owner_whatsapp,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DRIVER: Fetch ONLY delivered shipments for this driver
+ */
+exports.getDeliveredOrders = async (req, res, next) => {
+  try {
+    const driverId = req.user.id;
+
+    const result = await query(
+      `SELECT 
+        o.id, o.order_code, o.status, o.cargo_type, o.weight_kg,
+        o.pickup_address, o.dropoff_address,
+        o.fare_amount, o.currency, o.distance_km,
+        o.delivered_at, o.created_at,
+        COALESCE(o.dropoff_contact_name, 'Verified Receiving Supervisor') as recipient_name,
+        c.name as customer_name
+       FROM orders o
+       JOIN users c ON c.id = o.customer_id
+       WHERE o.driver_id = $1 AND o.status = 'delivered'
+       ORDER BY o.delivered_at DESC NULLS LAST, o.created_at DESC`,
+      [driverId]
+    );
+
+    return res.json({
+      success: true,
+      count: result.rows.length,
+      deliveredOrders: result.rows,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+

@@ -36,5 +36,10 @@ router.get('/audit-logs', adminController.getAuditLogs);
 // Analytics
 router.get('/analytics', adminController.getAnalytics);
 
+// Owner Truck Search / 3-Day Load Board Postings
+router.post('/truck-requirements', adminController.postTruckRequirement);
+router.get('/truck-requirements', adminController.getOwnerTruckRequirements);
+router.delete('/truck-requirements/:id', adminController.deleteTruckRequirement);
+
 module.exports = router;
 

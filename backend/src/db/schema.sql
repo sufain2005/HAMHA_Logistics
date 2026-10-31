@@ -348,3 +348,36 @@ BEGIN
     ORDER BY distance_meters ASC;
 END;
 $$ LANGUAGE plpgsql;
+
+-- 11. Truck Requirements Table (Owner Load Board / 3-Day Truck Search Broadcasts)
+CREATE TABLE IF NOT EXISTS truck_requirements (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    owner_name VARCHAR(120) NOT NULL,
+    owner_company VARCHAR(255),
+    owner_phone VARCHAR(30) NOT NULL,
+    owner_whatsapp VARCHAR(30),
+    truck_type VARCHAR(50) NOT NULL DEFAULT 'box_truck',
+    title VARCHAR(255) NOT NULL,
+    cargo_type VARCHAR(100) NOT NULL,
+    weight_tons NUMERIC(6, 2) NOT NULL DEFAULT 5.0,
+    pickup_state VARCHAR(100) NOT NULL,
+    pickup_city VARCHAR(100) NOT NULL,
+    pickup_address TEXT NOT NULL,
+    dropoff_state VARCHAR(100) NOT NULL,
+    dropoff_city VARCHAR(100) NOT NULL,
+    dropoff_address TEXT NOT NULL,
+    offered_fare NUMERIC(10, 2) NOT NULL,
+    currency VARCHAR(10) NOT NULL DEFAULT 'INR',
+    distance_km NUMERIC(10, 2) DEFAULT 160.0,
+    validity_days INT NOT NULL DEFAULT 3,
+    posted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '3 days'),
+    status VARCHAR(30) NOT NULL DEFAULT 'active',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_truck_req_state ON truck_requirements(pickup_state, status, expires_at);
+CREATE INDEX IF NOT EXISTS idx_truck_req_owner ON truck_requirements(owner_id);
+

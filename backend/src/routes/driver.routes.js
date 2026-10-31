@@ -20,5 +20,12 @@ router.patch('/orders/:orderId/status', driverController.updateOrderStatus);
 // Location ping fallback
 router.post('/location', driverController.updateLocation);
 
+// Delivered Shipments History (Strictly Delivered Only)
+router.get('/orders/delivered', driverController.getDeliveredOrders);
+
+// Search for Work in State & Contact Owner (3-Day Load Board)
+router.get('/truck-requirements/search', driverController.searchTruckRequirements);
+router.post('/truck-requirements/:id/contact', driverController.contactOwnerForRequirement);
+
 module.exports = router;
 

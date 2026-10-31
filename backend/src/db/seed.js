@@ -149,6 +149,45 @@ async function seedDatabase() {
        ON CONFLICT (id) DO NOTHING`
     );
 
+    // 7. Seed Owner Truck Requirements (3-Day Search for Work Load Broadcasts)
+    await client.query('DELETE FROM truck_requirements WHERE owner_id = $1', [adminId]);
+    await client.query(`
+      INSERT INTO truck_requirements (
+        owner_id, owner_name, owner_company, owner_phone, owner_whatsapp,
+        truck_type, title, cargo_type, weight_tons,
+        pickup_state, pickup_city, pickup_address,
+        dropoff_state, dropoff_city, dropoff_address,
+        offered_fare, currency, distance_km, validity_days, posted_at, expires_at, status
+      ) VALUES 
+      (
+        $1, 'Vikram Singhania', 'Singhania National Freight Corp', '+919820012345', '+919820012345',
+        'box_truck', 'Require 10-Ton Closed Box Truck for FMCG Consignment', 'Packaged FMCG & Dairy Products', 8.5,
+        'Maharashtra', 'Bhiwandi', 'Bhiwandi Logistics Park, Depot 4B, Thane',
+        'Maharashtra', 'Pune', 'Chakan Industrial Phase II, Pune MIDC',
+        18500.00, 'INR', 158.0, 3, NOW(), NOW() + INTERVAL '3 days', 'active'
+      ),
+      (
+        $1, 'Vikram Singhania', 'Singhania National Freight Corp', '+919820012345', '+919820012345',
+        'heavy_freight', 'Immediate Need: 16-Tire Multi-Axle for Automobile Components', 'Automobile Engine Blocks & Chassis Parts', 14.0,
+        'Maharashtra', 'Navi Mumbai', 'JNPT Port Container Freight Station Gate 2, Uran',
+        'Maharashtra', 'Nashik', 'Ambad Industrial Area, Nashik MIDC',
+        26500.00, 'INR', 195.0, 3, NOW() - INTERVAL '4 hours', (NOW() - INTERVAL '4 hours') + INTERVAL '3 days', 'active'
+      ),
+      (
+        $1, 'Vikram Singhania', 'Singhania National Freight Corp', '+919820012345', '+919820012345',
+        'van', 'Urgent Van Required for Temperature Controlled Pharma Delivery', 'Life-Saving Diagnostic Reagents & Vaccines', 1.8,
+        'Maharashtra', 'Mumbai', 'Andheri East Cargo Complex, Airport Road, Mumbai',
+        'Maharashtra', 'Kolhapur', 'Shiroli MIDC Central Cold Hub, Kolhapur',
+        14200.00, 'INR', 380.0, 3, NOW() - INTERVAL '10 hours', (NOW() - INTERVAL '10 hours') + INTERVAL '3 days', 'active'
+      ),
+      (
+        $1, 'Vikram Singhania', 'Singhania National Freight Corp', '+919820012345', '+919820012345',
+        'box_truck', 'Interstate Freight: 8-Ton Truck for Textile Machinery Parts', 'Precision Weaving Loom Components', 7.2,
+        'Maharashtra', 'Thane', 'Wagle Industrial Estate, Road No 16, Thane West',
+        'Gujarat', 'Surat', 'Sachin GIDC Textile Processing Park, Surat',
+        22000.00, 'INR', 285.0, 3, NOW() - INTERVAL '1 day', (NOW() - INTERVAL '1 day') + INTERVAL '3 days', 'active'
+      )`, [adminId]);
+
     await client.query('COMMIT');
     console.log(`
 ✅ Neon Database successfully seeded!

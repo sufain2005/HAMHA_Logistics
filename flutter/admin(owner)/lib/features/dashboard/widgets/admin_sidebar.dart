@@ -7,6 +7,7 @@ class AdminSidebar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onItemSelected;
   final VoidCallback onLogout;
+  final VoidCallback? onPostTruckRequirement;
 
   const AdminSidebar({
     super.key,
@@ -14,6 +15,7 @@ class AdminSidebar extends StatelessWidget {
     required this.selectedIndex,
     required this.onItemSelected,
     required this.onLogout,
+    this.onPostTruckRequirement,
   });
 
   @override
@@ -189,6 +191,42 @@ class AdminSidebar extends StatelessWidget {
               ],
             ),
           ),
+
+          if (onPostTruckRequirement != null)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AdminTheme.crimsonTint,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AdminTheme.crimsonRed.withAlpha(60)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.travel_explore, size: 16, color: AdminTheme.crimsonRed),
+                      SizedBox(width: 6),
+                      Text('Search for Truck', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: AdminTheme.crimsonDark)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text('Post 3-day load broadcasts to state drivers.', style: TextStyle(fontSize: 10, color: AdminTheme.textMuted)),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    onPressed: onPostTruckRequirement,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AdminTheme.crimsonRed,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      minimumSize: Size.zero,
+                    ),
+                    icon: const Icon(Icons.add, size: 14),
+                    label: const Text('POST 3-DAY LOAD', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900)),
+                  ),
+                ],
+              ),
+            ),
 
           // Footer Sign Out
           Container(

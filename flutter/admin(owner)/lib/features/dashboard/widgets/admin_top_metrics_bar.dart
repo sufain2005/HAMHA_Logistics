@@ -5,11 +5,13 @@ import '../../../core/auth/admin_rbac.dart';
 class AdminTopMetricsBar extends StatelessWidget {
   final AdminUserModel admin;
   final VoidCallback onRefresh;
+  final VoidCallback? onPostTruckRequirement;
 
   const AdminTopMetricsBar({
     super.key,
     required this.admin,
     required this.onRefresh,
+    this.onPostTruckRequirement,
   });
 
   @override
@@ -94,6 +96,22 @@ class AdminTopMetricsBar extends StatelessWidget {
               ),
             ),
           ),
+
+          if (onPostTruckRequirement != null) ...[
+            const SizedBox(width: 12),
+            ElevatedButton.icon(
+              onPressed: onPostTruckRequirement,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AdminTheme.crimsonRed,
+                foregroundColor: AdminTheme.crispWhite,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              icon: const Icon(Icons.add_road, size: 16),
+              label: const Text('SEARCH FOR TRUCK (3-DAY)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+            ),
+          ],
+          const SizedBox(width: 8),
 
           // Refresh Button
           IconButton(

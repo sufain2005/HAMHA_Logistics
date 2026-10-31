@@ -18,6 +18,7 @@ import '../../dispatch/screens/dispatch_matrix_screen.dart';
 import '../../pricing/screens/tariffs_pricing_screen.dart';
 import '../../finance/screens/financial_ledgers_screen.dart';
 import '../../disputes/screens/dispute_audit_hub_screen.dart';
+import '../../fleet/widgets/owner_post_truck_requirement_modal.dart';
 import '../widgets/admin_sidebar.dart';
 import '../widgets/admin_top_metrics_bar.dart';
 import '../../auth/screens/admin_login_screen.dart';
@@ -249,6 +250,17 @@ class _AdminDashboardShellState extends State<AdminDashboardShell> {
     _mapController.move(driver.location, 14.5);
   }
 
+  void _openPostTruckRequirementModal() {
+    showDialog(
+      context: context,
+      builder: (_) => OwnerPostTruckRequirementModal(
+        onRequirementPosted: () {
+          _loadFleetData();
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -263,6 +275,7 @@ class _AdminDashboardShellState extends State<AdminDashboardShell> {
               setState(() => _selectedNavIndex = index);
             },
             onLogout: _handleLogout,
+            onPostTruckRequirement: _openPostTruckRequirementModal,
           ),
 
           // 2. MAIN OPERATIONS AREA
@@ -281,6 +294,7 @@ class _AdminDashboardShellState extends State<AdminDashboardShell> {
                       ),
                     );
                   },
+                  onPostTruckRequirement: _openPostTruckRequirementModal,
                 ),
 
                 // Active Workspace (Phase 2 Live Fleet Split View)

@@ -694,5 +694,137 @@ exports.updateTariffs = async (req, res, next) => {
   }
 };
 
+/**
+ * OWNER: Post "Searching for Truck" requirement with 3-day validity
+ */
+exports.postTruckRequirement = async (req, res, next) => {
+  try {
+    const ownerId = req.user.id;
+    const {
+      truckType,
+      title,
+      cargoType,
+      weightTons,
+      pickupState,
+      pickupCity,
+      pickupAddress,
+      dropoffState,
+      dropoffCity,
+      dropoffAddress,
+      offeredFare,
+      distanceKm,
+      contactPhone,
+      contactWhatsapp,
+    } = req.body;
+
+    if (!truckType || !pickupState || !dropoffState || !offeredFare) {
+      return res.status(400).json({
+        success: false,
+        message: 'Required fields: truckType, pickupState, dropoffState, offeredFare.',
+      });
+    }
+
+    const ownerName = req.user.name || 'HAMHA Fleet Owner';
+    const ownerCompany = req.user.company_name || 'HAMHA Logistics Partner';
+    const phone = contactPhone || req.user.phone || '+919820012345';
+    const whatsapp = contactWhatsapp || phone;
+
+    const result = await query(
+      `INSERT INTO truck_requirements (
+        owner_id, owner_name, owner_company, owner_phone, owner_whatsapp,
+        truck_type, title, cargo_type, weight_tons,
+        pickup_state, pickup_city, pickup_address,
+        dropoff_state, dropoff_city, dropoff_address,
+        offered_fare, currency, distance_km, validity_days, posted_at, expires_at, status
+      ) VALUES (
+        $1, $2, $3, $4, $5,
+        $6, $7, $8, $9,
+        $10, $11, $12,
+        $13, $14, $15,
+        $16, 'INR', $17, 3, NOW(), NOW() + INTERVAL '3 days', 'active'
+      ) RETURNING *, ROUND(EXTRACT(EPOCH FROM (expires_at - NOW())))::INT AS remaining_seconds`,
+      [
+        ownerId, ownerName, ownerCompany, phone, whatsapp,
+        truckType, title || `Require ${truckType.replace('_', ' ')} for ${cargoType || 'Freight'}`,
+        cargoType || 'General Freight', parseFloat(weightTons) || 5.0,
+        pickupState, pickupCity || pickupState, pickupAddress || `${pickupCity || pickupState} Depot`,
+        dropoffState, dropoffCity || dropoffState, dropoffAddress || `${dropoffCity || dropoffState} Logistics Hub`,
+        parseFloat(offeredFare), parseFloat(distanceKm) || 150.0,
+      ]
+    );
+
+    const requirement = result.rows[0];
+
+    // Real-time broadcast to all listening drivers
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('truck_requirement:new', requirement);
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: 'Truck requirement broadcasted successfully with 3-day active validity.',
+      requirement,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * OWNER: Fetch truck requirements posted by this owner
+ */
+exports.getOwnerTruckRequirements = async (req, res, next) => {
+  try {
+    const ownerId = req.user.id;
+    const result = await query(
+      `SELECT *,
+        ROUND(EXTRACT(EPOCH FROM (expires_at - NOW())))::INT AS remaining_seconds,
+        CASE WHEN expires_at < NOW() THEN 'expired' ELSE status END AS computed_status
+       FROM truck_requirements
+       WHERE owner_id = $1
+       ORDER BY created_at DESC`,
+      [ownerId]
+    );
+
+    return res.json({
+      success: true,
+      requirements: result.rows,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * OWNER: Cancel/Close a truck requirement
+ */
+exports.deleteTruckRequirement = async (req, res, next) => {
+  try {
+    const ownerId = req.user.id;
+    const { id } = req.params;
+
+    const result = await query(
+      `UPDATE truck_requirements
+       SET status = 'cancelled', updated_at = NOW()
+       WHERE id = $1 AND owner_id = $2
+       RETURNING id, status`,
+      [id, ownerId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Requirement not found or unauthorized.' });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Requirement closed successfully.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 
 

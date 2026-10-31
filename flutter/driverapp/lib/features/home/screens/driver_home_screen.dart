@@ -3,6 +3,7 @@ import '../../../core/theme/driver_theme.dart';
 import '../../../core/models/driver_completed_order_model.dart';
 import '../../../core/services/driver_api_service.dart';
 import '../../dashboard/widgets/driver_cash_out_modal.dart';
+import 'driver_work_search_screen.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   final VoidCallback onGoToTracking;
@@ -17,9 +18,10 @@ class DriverHomeScreen extends StatefulWidget {
 }
 
 class _DriverHomeScreenState extends State<DriverHomeScreen> {
-  final List<DriverCompletedOrderModel> _completedOrders = DriverCompletedOrderModel.sampleCompletedOrders();
+  List<DriverCompletedOrderModel> _completedOrders = DriverCompletedOrderModel.sampleCompletedOrders();
   String _selectedFilter = 'Today';
   double _todayEarnings = 3450.0;
+  String _currentState = 'Maharashtra';
 
   @override
   void initState() {
@@ -27,6 +29,16 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     final driver = DriverApiService().currentDriver;
     if (driver != null) {
       _todayEarnings = driver.todayEarnings;
+    }
+    _loadDeliveredOrders();
+  }
+
+  Future<void> _loadDeliveredOrders() async {
+    final orders = await DriverApiService().fetchDeliveredOrders();
+    if (mounted) {
+      setState(() {
+        _completedOrders = orders;
+      });
     }
   }
 
@@ -466,19 +478,171 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 20),
+
+            // ==========================================
+            // SEARCH FOR WORK IN STATE (OWNER LOAD BOARD)
+            // ==========================================
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [DriverTheme.deepBlack, Color(0xFF1E293B)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(30),
+                    blurRadius: 14,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: DriverTheme.crimsonRed.withAlpha(40),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.travel_explore, color: DriverTheme.crimsonLight, size: 20),
+                          ),
+                          const SizedBox(width: 10),
+                          const Text(
+                            'Search for Work',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: DriverTheme.crispWhite,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: DriverTheme.crimsonRed,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          '3-DAY POSTINGS',
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w900,
+                            color: DriverTheme.crispWhite,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Direct Fleet Owners are actively searching for trucks in your state with 3-day load broadcasts.',
+                    style: TextStyle(fontSize: 12.5, color: Color(0xFFCBD5E1), height: 1.4),
+                  ),
+                  const SizedBox(height: 16),
+
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F172A),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFF334155)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.location_on, size: 14, color: DriverTheme.crimsonRed),
+                            const SizedBox(width: 4),
+                            Text(
+                              _currentState,
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                                color: DriverTheme.crispWhite,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => DriverWorkSearchScreen(initialSelectedState: _currentState),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: DriverTheme.crimsonRed,
+                            foregroundColor: DriverTheme.crispWhite,
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          icon: const Icon(Icons.search, size: 16),
+                          label: const Text('FIND WORK IN STATE', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 24),
 
-            // Completed Shipments Section Header
+            // Delivered Shipments Section Header (Strictly Delivered Only)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Completed Shipments',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: DriverTheme.deepBlack,
-                  ),
+                Row(
+                  children: [
+                    const Text(
+                      'Delivered Shipments',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: DriverTheme.deepBlack,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: DriverTheme.statusOnline.withAlpha(20),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: DriverTheme.statusOnline),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.check, size: 10, color: DriverTheme.statusOnline),
+                          SizedBox(width: 3),
+                          Text(
+                            'DELIVERED ONLY',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w900,
+                              color: DriverTheme.statusOnline,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 Row(
                   children: ['Today', 'All'].map((filter) {

@@ -76,7 +76,8 @@ async function runMigration(existingClient) {
 • Orders table configured with INR currency & milestone checkpoints.
 • Stored functions & GiST spatial indexes installed cleanly.
 • Tables synchronized: users, vehicles, orders, transit_checkpoints,
-  system_tariffs, disputes, system_audit_logs, driver_location_logs.
+  system_tariffs, disputes, system_audit_logs, driver_location_logs,
+  truck_requirements.
 ======================================================================
     `);
   } catch (error) {
