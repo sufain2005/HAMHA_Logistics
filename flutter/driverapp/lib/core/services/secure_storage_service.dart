@@ -31,6 +31,10 @@ class SecureStorageService {
     return await _storage.read(key: _keyJwtToken);
   }
 
+  Future<String?> getDriverId() async {
+    return await _storage.read(key: _keyDriverId);
+  }
+
   Future<String?> getDriverName() async {
     return await _storage.read(key: _keyDriverName);
   }

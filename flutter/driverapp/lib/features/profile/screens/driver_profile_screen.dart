@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../core/theme/driver_theme.dart';
 import '../../../core/services/driver_api_service.dart';
 import '../../../core/services/driver_socket_service.dart';
@@ -186,13 +187,33 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                               ],
                             ),
                             const SizedBox(height: 2),
-                            const Text(
-                              'PILOT ID: HMH-DRV-4921',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: DriverTheme.textMuted,
-                                letterSpacing: 0.8,
+                            InkWell(
+                              onTap: () {
+                                final dId = driver?.id ?? '2ff1fda4-bea5-4e97-bdf4-755a6fc4a2d3';
+                                Clipboard.setData(ClipboardData(text: dId));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Driver ID copied to clipboard: $dId'),
+                                    backgroundColor: DriverTheme.statusOnline,
+                                  ),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(4),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    'DRIVER ID: ${driver?.id ?? "2ff1fda4-bea5-4e97-bdf4-755a6fc4a2d3"}',
+                                    style: const TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: DriverTheme.crimsonRed,
+                                      letterSpacing: 0.5,
+                                      fontFamily: 'monospace',
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.copy, size: 12, color: DriverTheme.textMuted),
+                                ],
                               ),
                             ),
                             const SizedBox(height: 6),

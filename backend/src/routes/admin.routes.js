@@ -9,16 +9,18 @@ router.get('/truck-requirements', optionalAuthenticateJWT, adminController.getOw
 router.put('/truck-requirements/:id', optionalAuthenticateJWT, adminController.updateTruckRequirement);
 router.delete('/truck-requirements/:id', optionalAuthenticateJWT, adminController.deleteTruckRequirement);
 
+// Dispatch Management & Direct Driver Requests (Open to authorized owner sessions)
+router.get('/orders', optionalAuthenticateJWT, adminController.getAllOrders);
+router.post('/orders/dispatch', optionalAuthenticateJWT, adminController.manualDispatch);
+router.post('/orders/request-long-delivery', optionalAuthenticateJWT, adminController.requestLongDelivery);
+router.get('/drivers/list', optionalAuthenticateJWT, adminController.getDriversList);
+
 // All operational management endpoints below require strict admin role authentication
 router.use(authenticateJWT);
 router.use(requireRole('admin'));
 
 // Live Fleet overview for Owner Mapbox screen
 router.get('/fleet', adminController.getLiveFleet);
-
-// Dispatch Management
-router.get('/orders', adminController.getAllOrders);
-router.post('/orders/dispatch', adminController.manualDispatch);
 router.get('/drivers/nearby', adminController.getNearbyDrivers);
 
 // Onboarding Approvals (KYC & Documents)

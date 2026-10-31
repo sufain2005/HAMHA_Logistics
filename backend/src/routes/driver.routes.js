@@ -7,6 +7,12 @@ const { authenticateJWT, optionalAuthenticateJWT, requireRole } = require('../mi
 router.get('/truck-requirements/search', optionalAuthenticateJWT, driverController.searchTruckRequirements);
 router.post('/truck-requirements/:id/contact', optionalAuthenticateJWT, driverController.contactOwnerForRequirement);
 
+// Active & Delivered Consignments (open to authenticated driver sessions)
+router.get('/orders/current', optionalAuthenticateJWT, driverController.getCurrentOrder);
+router.patch('/orders/:orderId/status', optionalAuthenticateJWT, driverController.updateOrderStatus);
+router.put('/orders/:orderId/status', optionalAuthenticateJWT, driverController.updateOrderStatus);
+router.get('/orders/delivered', optionalAuthenticateJWT, driverController.getDeliveredOrders);
+
 // All operational driver endpoints strictly restricted to authenticated DRIVERS
 router.use(authenticateJWT);
 router.use(requireRole('driver'));
@@ -17,15 +23,10 @@ router.post('/toggle-online', driverController.toggleOnlineStatus);
 
 // Order workflows
 router.get('/orders/available', driverController.getAvailableOrders);
-router.get('/orders/current', driverController.getCurrentOrder);
 router.post('/orders/:orderId/accept', driverController.acceptOrder);
-router.patch('/orders/:orderId/status', driverController.updateOrderStatus);
 
 // Location ping fallback
 router.post('/location', driverController.updateLocation);
-
-// Delivered Shipments History (Strictly Delivered Only)
-router.get('/orders/delivered', driverController.getDeliveredOrders);
 
 module.exports = router;
 

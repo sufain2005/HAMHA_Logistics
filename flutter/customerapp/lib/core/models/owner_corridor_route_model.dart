@@ -117,3 +117,4 @@ class OwnerCorridorRouteModel {
 
   String get routeCorridorText => '$pickupCity ($pickupState) ➔ $dropoffCity ($dropoffState)';
 }
+

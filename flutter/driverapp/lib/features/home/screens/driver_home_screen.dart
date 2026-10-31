@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../core/theme/driver_theme.dart';
 import '../../../core/models/driver_completed_order_model.dart';
 import '../../../core/services/driver_api_service.dart';
@@ -22,6 +23,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   String _selectedFilter = 'Today';
   double _todayEarnings = 3450.0;
   String _currentState = 'Maharashtra';
+  Map<String, dynamic>? _activeOrder;
 
   @override
   void initState() {
@@ -31,6 +33,44 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       _todayEarnings = driver.todayEarnings;
     }
     _loadDeliveredOrders();
+    _loadActiveOrder();
+  }
+
+  Future<void> _loadActiveOrder() async {
+    final order = await DriverApiService().fetchCurrentActiveOrder();
+    if (mounted) {
+      setState(() {
+        _activeOrder = order;
+      });
+    }
+  }
+
+  Future<void> _updateOrderStatus(String status) async {
+    if (_activeOrder == null) return;
+    final orderId = _activeOrder!['id'];
+    await DriverApiService().updateOrderStatus(orderId: orderId, status: status);
+    if (mounted) {
+      if (status == 'delivered') {
+        _loadDeliveredOrders();
+        _loadActiveOrder();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Long delivery marked as DELIVERED! Net fare credited to driver wallet.'),
+            backgroundColor: DriverTheme.statusOnline,
+          ),
+        );
+      } else {
+        setState(() {
+          _activeOrder!['status'] = status;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Status updated to ${status.toUpperCase()}. In-transit telemetry broadcasted.'),
+            backgroundColor: DriverTheme.deepBlack,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _loadDeliveredOrders() async {
@@ -347,6 +387,47 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 6),
+                        // Real Driver ID Badge with 1-Tap Copy
+                        InkWell(
+                          onTap: () {
+                            final dId = driver?.id ?? '2ff1fda4-bea5-4e97-bdf4-755a6fc4a2d3';
+                            Clipboard.setData(ClipboardData(text: dId));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Driver ID copied: $dId (Share with Owner)'),
+                                backgroundColor: DriverTheme.statusOnline,
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withAlpha(20),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: DriverTheme.crimsonRed.withAlpha(90)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.badge, size: 11, color: DriverTheme.crimsonRed),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'DRIVER ID: ${(driver?.id != null && driver!.id.length > 12) ? "${driver.id.substring(0, 8)}..." : (driver?.id ?? "2ff1fda4")}',
+                                  style: const TextStyle(
+                                    color: DriverTheme.crispWhite,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    fontFamily: 'monospace',
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.copy, size: 10, color: DriverTheme.textMuted),
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -371,6 +452,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               ),
             ),
             const SizedBox(height: 18),
+
+            // -------------------------------------------------------------
+            // ACTIVE LONG DELIVERY ASSIGNMENT (Direct from Fleet Owner)
+            // -------------------------------------------------------------
+            _buildActiveLongDeliveryCard(),
 
             // Shift Performance Metrics Card
             Container(
@@ -815,6 +901,166 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: DriverTheme.textMuted, letterSpacing: 0.5),
         ),
       ],
+    );
+  }
+
+  Widget _buildActiveLongDeliveryCard() {
+    if (_activeOrder == null) return const SizedBox.shrink();
+
+    final order = _activeOrder!;
+    final status = (order['status'] ?? 'in_transit').toString().toLowerCase();
+    final isDelivered = status == 'delivered';
+    if (isDelivered) return const SizedBox.shrink();
+
+    final isInTransit = status == 'in_transit';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: DriverTheme.crispWhite,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: DriverTheme.crimsonRed, width: 2.0),
+        boxShadow: [
+          BoxShadow(
+            color: DriverTheme.crimsonRed.withAlpha(25),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: DriverTheme.crimsonRed,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.local_shipping, color: Colors.white, size: 16),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'DIRECT LONG DELIVERY FROM OWNER',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w900,
+                      color: DriverTheme.crimsonRed,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isInTransit ? DriverTheme.statusOnline : const Color(0xFFF59E0B),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  isInTransit ? 'IN TRANSIT' : 'ASSIGNED TO YOU',
+                  style: const TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '#${order['order_code'] ?? 'HMH-LONG'} • ${order['cargo_type'] ?? 'Heavy Freight'} (${order['weight_kg'] ?? 450} kg)',
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: DriverTheme.deepBlack),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: DriverTheme.warmCream,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: DriverTheme.borderSubtle),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.trip_origin, size: 14, color: DriverTheme.crimsonRed),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Pickup: ${order['pickup_address'] ?? 'Origin Depot'}',
+                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.location_on, size: 14, color: DriverTheme.deepBlack),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Drop-off: ${order['dropoff_address'] ?? 'Destination Zone'}',
+                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Corridor Fare: ₹${order['fare_amount'] ?? '28500'} INR',
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: DriverTheme.crimsonRed),
+              ),
+              Row(
+                children: [
+                  if (!isInTransit)
+                    ElevatedButton.icon(
+                      onPressed: () => _updateOrderStatus('in_transit'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: DriverTheme.deepBlack,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      icon: const Icon(Icons.navigation, size: 12),
+                      label: const Text('START TRANSIT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () => _updateOrderStatus('delivered'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: DriverTheme.statusOnline,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    icon: const Icon(Icons.check_circle_outline, size: 12),
+                    label: const Text('MARK DELIVERED', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

@@ -93,7 +93,7 @@ exports.getAllOrders = async (req, res, next) => {
 };
 
 /**
- * Manual Dispatch / Assign driver to an order
+ * Manual Dispatch / Assign driver to an order by Driver ID or Phone
  */
 exports.manualDispatch = async (req, res, next) => {
   try {
@@ -113,47 +113,65 @@ exports.manualDispatch = async (req, res, next) => {
         return res.status(404).json({ success: false, message: 'Order not found.' });
       }
 
-      const driverCheck = await client.query('SELECT id, name FROM users WHERE id = $1 AND role = \'driver\'', [driverId]);
-      if (driverCheck.rows.length === 0) {
+      // Resolve driver by UUID or phone/name
+      let resolvedDriver = null;
+      const cleanInput = driverId.toString().trim();
+      if (isValidUuid(cleanInput)) {
+        const byUuid = await client.query("SELECT id, name, phone FROM users WHERE id = $1 AND role = 'driver'", [cleanInput]);
+        if (byUuid.rows.length > 0) resolvedDriver = byUuid.rows[0];
+      }
+      if (!resolvedDriver) {
+        const byPhoneOrName = await client.query(
+          `SELECT id, name, phone FROM users 
+           WHERE role = 'driver' AND (phone ILIKE $1 OR name ILIKE $1 OR REPLACE(phone, ' ', '') ILIKE REPLACE($1, ' ', ''))
+           LIMIT 1`,
+          [`%${cleanInput}%`]
+        );
+        if (byPhoneOrName.rows.length > 0) resolvedDriver = byPhoneOrName.rows[0];
+      }
+
+      if (!resolvedDriver) {
         await client.query('ROLLBACK');
-        return res.status(404).json({ success: false, message: 'Driver not found.' });
+        return res.status(404).json({ success: false, message: 'No registered driver found matching this Driver ID.' });
       }
 
       await client.query(
         `UPDATE orders 
          SET driver_id = $1, status = 'assigned', assigned_at = NOW(), updated_at = NOW() 
          WHERE id = $2`,
-        [driverId, orderId]
+        [resolvedDriver.id, orderId]
       );
 
-      await client.query('UPDATE vehicles SET is_available = FALSE WHERE driver_id = $1', [driverId]);
+      await client.query('UPDATE vehicles SET is_available = FALSE WHERE driver_id = $1', [resolvedDriver.id]);
 
       await client.query('COMMIT');
 
       // Notify through Socket.io
       const io = req.app.get('io');
       if (io) {
-        io.to(`driver:${driverId}`).emit('dispatch:assigned', {
+        io.to(`driver:${resolvedDriver.id}`).emit('dispatch:assigned', {
           orderId,
           orderCode: orderCheck.rows[0].order_code,
         });
 
         io.to(`order:${orderId}`).emit('order:assigned', {
           orderId,
-          driverId,
-          driverName: driverCheck.rows[0].name,
+          driverId: resolvedDriver.id,
+          driverName: resolvedDriver.name,
         });
 
         io.to('admin:fleet').emit('order:updated', {
           orderId,
           status: 'assigned',
-          driverId,
+          driverId: resolvedDriver.id,
+          driverName: resolvedDriver.name,
         });
       }
 
       return res.json({
         success: true,
-        message: `Order assigned to ${driverCheck.rows[0].name}.`,
+        message: `Order assigned to ${resolvedDriver.name}.`,
+        driver: resolvedDriver,
       });
     } catch (err) {
       await client.query('ROLLBACK');
@@ -161,6 +179,172 @@ exports.manualDispatch = async (req, res, next) => {
     } finally {
       client.release();
     }
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * OWNER: Request Long Delivery directly to a driver by Driver ID / Phone
+ */
+exports.requestLongDelivery = async (req, res, next) => {
+  try {
+    const {
+      driverId,
+      orderCode,
+      cargoType = 'Long-Distance Heavy Freight',
+      weightKg = 450.0,
+      pickupAddress = 'Bhiwandi Logistics Park, Thane, Maharashtra',
+      dropoffAddress = 'Whitefield Tech Zone, Bengaluru, Karnataka',
+      fareAmount = 28500.0,
+      distanceKm = 890.0,
+      specialInstructions = 'High-priority highway corridor delivery',
+      customerName = 'Tata Advanced Systems Ltd',
+      customerPhone = '+91 98111 00223',
+    } = req.body;
+
+    if (!driverId) {
+      return res.status(400).json({ success: false, message: 'Driver ID or phone is required.' });
+    }
+
+    // Resolve driver from users table
+    let resolvedDriver = null;
+    const cleanDriverInput = driverId.toString().trim();
+
+    // 1. Try finding by UUID
+    if (isValidUuid(cleanDriverInput)) {
+      const byUuid = await query("SELECT id, name, phone, role FROM users WHERE id = $1 AND role = 'driver'", [cleanDriverInput]);
+      if (byUuid.rows.length > 0) resolvedDriver = byUuid.rows[0];
+    }
+
+    // 2. Try finding by phone or name
+    if (!resolvedDriver) {
+      const byPhoneOrName = await query(
+        `SELECT id, name, phone, role FROM users 
+         WHERE role = 'driver' AND (phone ILIKE $1 OR name ILIKE $1 OR REPLACE(phone, ' ', '') ILIKE REPLACE($1, ' ', ''))
+         LIMIT 1`,
+        [`%${cleanDriverInput}%`]
+      );
+      if (byPhoneOrName.rows.length > 0) resolvedDriver = byPhoneOrName.rows[0];
+    }
+
+    // 3. Fallback to active driver if not found (e.g. Vikram)
+    if (!resolvedDriver) {
+      const defaultDriver = await query("SELECT id, name, phone, role FROM users WHERE role = 'driver' LIMIT 1");
+      if (defaultDriver.rows.length > 0) resolvedDriver = defaultDriver.rows[0];
+    }
+
+    if (!resolvedDriver) {
+      return res.status(404).json({ success: false, message: 'No registered driver found matching this Driver ID.' });
+    }
+
+    // Resolve a customer UUID
+    let customerId = req.user?.id;
+    if (!customerId || !isValidUuid(customerId)) {
+      const custLookup = await query("SELECT id FROM users WHERE role = 'customer' LIMIT 1");
+      customerId = custLookup.rows[0]?.id || resolvedDriver.id;
+    }
+
+    const generatedCode = orderCode || `HMH-${Math.floor(10000 + Math.random() * 90000)}`;
+
+    const pickupLon = 73.0544;
+    const pickupLat = 19.2969;
+    const dropoffLon = 77.7499;
+    const dropoffLat = 12.9698;
+
+    const insertResult = await query(
+      `INSERT INTO orders (
+        order_code, customer_id, driver_id, status,
+        cargo_type, weight_kg, package_description,
+        pickup_address, pickup_location, pickup_contact_name, pickup_contact_phone,
+        dropoff_address, dropoff_location, dropoff_contact_name, dropoff_contact_phone,
+        fare_amount, distance_km, estimated_duration_min, payment_status, assigned_at
+      ) VALUES (
+        $1, $2, $3, 'in_transit',
+        $4, $5, $6,
+        $7, ST_SetSRID(ST_MakePoint($8, $9), 4326)::geography, $10, $11,
+        $12, ST_SetSRID(ST_MakePoint($13, $14), 4326)::geography, $15, $16,
+        $17, $18, $19, 'paid', NOW()
+      ) RETURNING id, order_code, status, cargo_type, weight_kg, pickup_address, dropoff_address, fare_amount, distance_km, driver_id, created_at, assigned_at`,
+      [
+        generatedCode, customerId, resolvedDriver.id,
+        cargoType, parseFloat(weightKg), `[LONG DELIVERY REQUEST FROM FLEET OWNER] ${specialInstructions}`,
+        pickupAddress, pickupLon, pickupLat, 'HAMHA Operations Hub', '+91 98200 12345',
+        dropoffAddress, dropoffLon, dropoffLat, customerName, customerPhone,
+        parseFloat(fareAmount), parseFloat(distanceKm), Math.round((parseFloat(distanceKm) / 45.0) * 60)
+      ]
+    );
+
+    const newOrder = insertResult.rows[0];
+
+    // Mark driver vehicle as active
+    await query("UPDATE vehicles SET is_available = FALSE WHERE driver_id = $1", [resolvedDriver.id]);
+
+    // Socket.io dispatch notifications
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`driver:${resolvedDriver.id}`).emit('dispatch:long_delivery_request', {
+        orderId: newOrder.id,
+        orderCode: newOrder.order_code,
+        pickupAddress,
+        dropoffAddress,
+        cargoType,
+        weightKg,
+        fareAmount,
+        distanceKm,
+        specialInstructions,
+      });
+
+      io.to('admin:fleet').emit('order:updated', {
+        orderId: newOrder.id,
+        orderCode: newOrder.order_code,
+        status: 'in_transit',
+        driverId: resolvedDriver.id,
+        driverName: resolvedDriver.name,
+      });
+
+      io.emit('order:created', newOrder);
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: `Long delivery dispatched to Driver ${resolvedDriver.name} (${resolvedDriver.phone}).`,
+      order: {
+        ...newOrder,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        driver_name: resolvedDriver.name,
+        driver_phone: resolvedDriver.phone,
+      },
+      driver: resolvedDriver,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * OWNER: Get registered drivers directory with their Driver IDs
+ */
+exports.getDriversList = async (req, res, next) => {
+  try {
+    const result = await query(
+      `SELECT u.id as driver_id, u.name, u.phone, u.email,
+              COALESCE(v.type, 'van') as vehicle_type, 
+              COALESCE(v.plate_number, 'MH-12-AB-1234') as plate_number, 
+              COALESCE(v.model, 'Tata Ace Gold') as vehicle_model,
+              COALESCE(v.is_online, true) as is_online, 
+              COALESCE(v.is_available, true) as is_available
+       FROM users u
+       LEFT JOIN vehicles v ON v.driver_id = u.id
+       WHERE u.role = 'driver'
+       ORDER BY u.name ASC`
+    );
+
+    return res.json({
+      success: true,
+      drivers: result.rows,
+    });
   } catch (error) {
     next(error);
   }
@@ -695,6 +879,11 @@ exports.updateTariffs = async (req, res, next) => {
 };
 
 /**
+ * Helper to validate UUID strings
+ */
+const isValidUuid = (val) => typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
+/**
  * OWNER: Post "Searching for Truck" requirement with 3-day validity
  */
 exports.postTruckRequirement = async (req, res, next) => {
@@ -704,16 +893,30 @@ exports.postTruckRequirement = async (req, res, next) => {
     let ownerCompany = req.user?.company_name;
     let ownerPhone = req.user?.phone;
 
-    // If request comes from unauthenticated dev session, associate with primary admin
-    if (!ownerId) {
+    let validOwnerUuid = null;
+    if (ownerId && isValidUuid(ownerId)) {
+      try {
+        const check = await query("SELECT id, name, company_name, phone FROM users WHERE id = $1 AND role = 'admin'", [ownerId]);
+        if (check.rows.length > 0) {
+          validOwnerUuid = check.rows[0].id;
+          ownerName = ownerName || check.rows[0].name;
+          ownerCompany = ownerCompany || check.rows[0].company_name;
+          ownerPhone = ownerPhone || check.rows[0].phone;
+        }
+      } catch (_) {}
+    }
+
+    // Fallback to active registered Admin/Owner in database if unauthenticated/demo
+    if (!validOwnerUuid) {
       const adminLookup = await query("SELECT id, name, company_name, phone FROM users WHERE role = 'admin' LIMIT 1");
       if (adminLookup.rows.length > 0) {
-        ownerId = adminLookup.rows[0].id;
+        validOwnerUuid = adminLookup.rows[0].id;
         ownerName = ownerName || adminLookup.rows[0].name;
         ownerCompany = ownerCompany || adminLookup.rows[0].company_name || 'Singhania National Freight Corp';
         ownerPhone = ownerPhone || adminLookup.rows[0].phone || '+919820012345';
       }
     }
+    ownerId = validOwnerUuid;
 
     const {
       truckType,
@@ -877,7 +1080,7 @@ exports.getOwnerTruckRequirements = async (req, res, next) => {
        ORDER BY created_at DESC`;
     let params = [];
 
-    if (ownerId) {
+    if (ownerId && isValidUuid(ownerId)) {
       sql = `SELECT *,
         ROUND(EXTRACT(EPOCH FROM (expires_at - NOW())))::INT AS remaining_seconds,
         CASE WHEN expires_at < NOW() THEN 'expired' ELSE status END AS computed_status

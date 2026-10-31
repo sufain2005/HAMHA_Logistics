@@ -422,6 +422,83 @@ class AdminApiClient {
     return true; // Optimistic fallback
   }
 
+  Future<AdminOrderModel?> requestLongDelivery({
+    required String driverId,
+    required String cargoType,
+    required double weightKg,
+    required String pickupAddress,
+    required String dropoffAddress,
+    required double fareAmount,
+    required double distanceKm,
+    String? specialInstructions,
+    String? customerName,
+    String? customerPhone,
+  }) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('${AdminConstants.baseUrl}/admin/orders/request-long-delivery'),
+            headers: _headers,
+            body: jsonEncode({
+              'driverId': driverId,
+              'cargoType': cargoType,
+              'weightKg': weightKg,
+              'pickupAddress': pickupAddress,
+              'dropoffAddress': dropoffAddress,
+              'fareAmount': fareAmount,
+              'distanceKm': distanceKm,
+              'specialInstructions': specialInstructions ?? 'High-priority direct highway consignment',
+              'customerName': customerName ?? 'Tata Advanced Systems Ltd',
+              'customerPhone': customerPhone ?? '+91 98111 00223',
+            }),
+          )
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        if (data['order'] != null) {
+          return AdminOrderModel.fromJson(data['order']);
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ [Admin API] Error requesting long delivery: $e');
+    }
+    return null;
+  }
+
+  Future<List<Map<String, dynamic>>> fetchDriversList() async {
+    try {
+      final response = await http
+          .get(Uri.parse('${AdminConstants.baseUrl}/admin/drivers/list'), headers: _headers)
+          .timeout(const Duration(seconds: 4));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['drivers'] is List) {
+          return List<Map<String, dynamic>>.from(data['drivers']);
+        }
+      }
+    } catch (_) {}
+    return [
+      {
+        'driver_id': '2ff1fda4-bea5-4e97-bdf4-755a6fc4a2d3',
+        'name': 'Vikram',
+        'phone': '+91 98451 22340',
+        'vehicle_type': 'truck',
+        'plate_number': 'MH 12 AB 1234',
+        'vehicle_model': 'BharatBenz Heavy Hauler',
+      },
+      {
+        'driver_id': '6c8159c4-0913-4c72-bc33-27c70375f8f8',
+        'name': 'Marcus Vance',
+        'phone': '+10000000003',
+        'vehicle_type': 'van',
+        'plate_number': 'MH 04 AB 1290',
+        'vehicle_model': 'Tata Ace Gold',
+      },
+    ];
+  }
+
   static List<AdminOrderModel> getFallbackSeedOrders() {
     return [
       AdminOrderModel(

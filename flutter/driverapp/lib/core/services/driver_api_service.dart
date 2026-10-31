@@ -20,6 +20,7 @@ class DriverApiService {
 
   Future<void> initializeFromStorage() async {
     _token = await _storage.getToken();
+    final storedDriverId = await _storage.getDriverId();
     final name = await _storage.getDriverName();
     final phone = await _storage.getDriverPhone();
     final vehicle = await _storage.getVehicleType();
@@ -28,11 +29,11 @@ class DriverApiService {
 
     if (_token != null && phone != null) {
       currentDriver = DriverUserModel(
-        id: 'drv-stored',
-        name: name ?? 'Rajesh Kumar',
+        id: (storedDriverId != null && storedDriverId != 'drv-stored') ? storedDriverId : '2ff1fda4-bea5-4e97-bdf4-755a6fc4a2d3',
+        name: name ?? 'Vikram',
         phone: phone,
-        email: 'driver@hamha.com',
-        vehicleType: vehicle ?? 'Van',
+        email: 'vikram.logistics@gmail.com',
+        vehicleType: vehicle ?? 'Truck',
         plateNumber: plate ?? 'MH 12 AB 1234',
         isOnboarded: onboarded,
       );
@@ -42,6 +43,8 @@ class DriverApiService {
   Map<String, String> get _headers => {
     'Content-Type': 'application/json',
     if (_token != null) 'Authorization': 'Bearer $_token',
+    'x-driver-id': currentDriver?.id ?? '2ff1fda4-bea5-4e97-bdf4-755a6fc4a2d3',
+    'x-driver-phone': currentDriver?.phone ?? '+91 98451 22340',
   };
 
   // ==========================================
@@ -412,6 +415,26 @@ class DriverApiService {
       'success': true,
       'message': 'Direct contact request dispatched to owner via HAMHA telematics corridor.',
     };
+  }
+
+  // ==========================================
+  // ACTIVE ASSIGNED / IN-TRANSIT ORDER
+  // ==========================================
+
+  Future<Map<String, dynamic>?> fetchCurrentActiveOrder() async {
+    try {
+      final response = await http
+          .get(Uri.parse('${ApiConstants.baseUrl}/driver/orders/current'), headers: _headers)
+          .timeout(const Duration(seconds: 4));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        if (data['hasActiveOrder'] == true && data['order'] != null) {
+          return Map<String, dynamic>.from(data['order']);
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 
   // ==========================================

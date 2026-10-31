@@ -161,6 +161,19 @@ class _DispatchMatrixScreenState extends State<DispatchMatrixScreen> {
                       icon: const Icon(Icons.refresh, size: 16),
                       label: const Text('Refresh Matrix', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                     ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: _showRequestLongDeliveryModal,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AdminTheme.crimsonRed,
+                        foregroundColor: AdminTheme.crispWhite,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 2,
+                      ),
+                      icon: const Icon(Icons.add_road, size: 16),
+                      label: const Text('+ Request Long Delivery by Driver ID', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
+                    ),
                   ],
                 ),
               ),
@@ -599,6 +612,25 @@ class _DispatchMatrixScreenState extends State<DispatchMatrixScreen> {
       ),
     );
   }
+
+  void _showRequestLongDeliveryModal() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _RequestLongDeliveryModal(
+        onSuccess: () {
+          _loadOrders();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Long delivery request dispatched to Driver! Persisted to Neon PostgreSQL.'),
+              backgroundColor: AdminTheme.statusOnline,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
 // ==========================================
@@ -872,3 +904,487 @@ class _PostGisRadiusDispatchModalState extends State<_PostGisRadiusDispatchModal
     );
   }
 }
+
+// ==========================================
+// REQUEST LONG DELIVERY MODAL (BY DRIVER ID)
+// ==========================================
+class _RequestLongDeliveryModal extends StatefulWidget {
+  final VoidCallback onSuccess;
+
+  const _RequestLongDeliveryModal({required this.onSuccess});
+
+  @override
+  State<_RequestLongDeliveryModal> createState() => _RequestLongDeliveryModalState();
+}
+
+class _RequestLongDeliveryModalState extends State<_RequestLongDeliveryModal> {
+  final _formKey = GlobalKey<FormState>();
+  final _driverIdController = TextEditingController(text: '2ff1fda4-bea5-4e97-bdf4-755a6fc4a2d3');
+  final _driverNameController = TextEditingController(text: 'Vikram (MH 12 AB 1234)');
+  final _pickupController = TextEditingController(text: 'Bhiwandi Warehousing Hub, Gate 4, Thane');
+  final _dropoffController = TextEditingController(text: 'Chakan Industrial Phase II, Pune MIDC');
+  final _cargoController = TextEditingController(text: 'Precision Automotive Components (Industrial)');
+  final _weightController = TextEditingController(text: '450.0');
+  final _fareController = TextEditingController(text: '18500');
+  final _distanceController = TextEditingController(text: '145.0');
+  final _instructionsController = TextEditingController(text: 'Priority direct highway transit. Inspect container seals on pickup.');
+
+  bool _isSubmitting = false;
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    _driverIdController.dispose();
+    _driverNameController.dispose();
+    _pickupController.dispose();
+    _dropoffController.dispose();
+    _cargoController.dispose();
+    _weightController.dispose();
+    _fareController.dispose();
+    _distanceController.dispose();
+    _instructionsController.dispose();
+    super.dispose();
+  }
+
+  void _selectPresetDriver(String id, String label) {
+    setState(() {
+      _driverIdController.text = id;
+      _driverNameController.text = label;
+    });
+  }
+
+  Future<void> _submitRequest() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
+
+    final driverId = _driverIdController.text.trim();
+    final weight = double.tryParse(_weightController.text.trim()) ?? 450.0;
+    final fare = double.tryParse(_fareController.text.trim()) ?? 18500.0;
+    final distance = double.tryParse(_distanceController.text.trim()) ?? 145.0;
+
+    final createdOrder = await AdminApiClient().requestLongDelivery(
+      driverId: driverId,
+      cargoType: _cargoController.text.trim(),
+      weightKg: weight,
+      pickupAddress: _pickupController.text.trim(),
+      dropoffAddress: _dropoffController.text.trim(),
+      fareAmount: fare,
+      distanceKm: distance,
+      specialInstructions: _instructionsController.text.trim(),
+      customerName: 'Tata Power Supply Chain',
+      customerPhone: '+91 98111 00223',
+    );
+
+    if (mounted) {
+      if (createdOrder != null) {
+        Navigator.of(context).pop();
+        widget.onSuccess();
+      } else {
+        setState(() {
+          _isSubmitting = false;
+          _errorMessage = 'Failed to dispatch long delivery to driver ID. Please verify driver ID and database connection.';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: Container(
+        width: 640,
+        decoration: BoxDecoration(
+          color: AdminTheme.crispWhite,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AdminTheme.borderSubtle, width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(40),
+              blurRadius: 30,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Modal Header
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: AdminTheme.borderSubtle)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AdminTheme.crimsonRed.withAlpha(20),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.add_road, color: AdminTheme.crimsonRed, size: 24),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'Request Long Delivery by Driver ID',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                            color: AdminTheme.deepBlack,
+                          ),
+                        ),
+                        SizedBox(height: 3),
+                        Text(
+                          'Direct owner consignment dispatch to registered carrier driver with real-time Neon DB sync.',
+                          style: TextStyle(fontSize: 12, color: AdminTheme.textMuted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: AdminTheme.textMuted),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+
+            // Modal Body Form
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (_errorMessage != null)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.red.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  _errorMessage!,
+                                  style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      // Quick Preset Driver Chips
+                      const Text(
+                        'SELECT REGISTERED CARRIER DRIVER',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AdminTheme.textMuted, letterSpacing: 0.6),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 8,
+                        children: [
+                          _buildPresetChip(
+                            label: 'Vikram (MH 12 AB 1234)',
+                            id: '2ff1fda4-bea5-4e97-bdf4-755a6fc4a2d3',
+                            isSelected: _driverIdController.text == '2ff1fda4-bea5-4e97-bdf4-755a6fc4a2d3',
+                          ),
+                          _buildPresetChip(
+                            label: 'Marcus Vance (MH 04 AB 1290)',
+                            id: '6c8159c4-0913-4c72-bc33-27c70375f8f8',
+                            isSelected: _driverIdController.text == '6c8159c4-0913-4c72-bc33-27c70375f8f8',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Target Driver ID input
+                      const Text(
+                        'DRIVER ID (UUID OR PHONE)',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AdminTheme.textMuted, letterSpacing: 0.6),
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: _driverIdController,
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+                        decoration: InputDecoration(
+                          prefixIcon: const Icon(Icons.badge, size: 18, color: AdminTheme.crimsonRed),
+                          hintText: 'Enter Driver UUID (e.g. 2ff1fda4-bea5-4e97-bdf4-755a6fc4a2d3)',
+                          filled: true,
+                          fillColor: AdminTheme.canvasBg,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderSubtle)),
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) return 'Please enter Driver ID';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Pickup & Dropoff Row
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'PICKUP DEPOT / ORIGIN',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AdminTheme.textMuted, letterSpacing: 0.6),
+                                ),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: _pickupController,
+                                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                                  decoration: InputDecoration(
+                                    prefixIcon: const Icon(Icons.location_on, size: 18, color: AdminTheme.crimsonRed),
+                                    filled: true,
+                                    fillColor: AdminTheme.canvasBg,
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderSubtle)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'DROP-OFF FACILITY / DESTINATION',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AdminTheme.textMuted, letterSpacing: 0.6),
+                                ),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: _dropoffController,
+                                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                                  decoration: InputDecoration(
+                                    prefixIcon: const Icon(Icons.flag, size: 18, color: AdminTheme.deepBlack),
+                                    filled: true,
+                                    fillColor: AdminTheme.canvasBg,
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderSubtle)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Cargo Spec & Weight
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'CARGO CLASSIFICATION',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AdminTheme.textMuted, letterSpacing: 0.6),
+                                ),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: _cargoController,
+                                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                                  decoration: InputDecoration(
+                                    prefixIcon: const Icon(Icons.inventory, size: 18, color: AdminTheme.textMuted),
+                                    filled: true,
+                                    fillColor: AdminTheme.canvasBg,
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderSubtle)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'WEIGHT (KG)',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AdminTheme.textMuted, letterSpacing: 0.6),
+                                ),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: _weightController,
+                                  keyboardType: TextInputType.number,
+                                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                                  decoration: InputDecoration(
+                                    filled: true,
+                                    fillColor: AdminTheme.canvasBg,
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderSubtle)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Fare & Distance
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'OFFERED FARE (₹ INR)',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AdminTheme.textMuted, letterSpacing: 0.6),
+                                ),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: _fareController,
+                                  keyboardType: TextInputType.number,
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: AdminTheme.crimsonRed),
+                                  decoration: InputDecoration(
+                                    prefixText: '₹ ',
+                                    prefixStyle: const TextStyle(fontWeight: FontWeight.w900, color: AdminTheme.crimsonRed),
+                                    filled: true,
+                                    fillColor: AdminTheme.canvasBg,
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderSubtle)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'DISTANCE (KM)',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AdminTheme.textMuted, letterSpacing: 0.6),
+                                ),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: _distanceController,
+                                  keyboardType: TextInputType.number,
+                                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                                  decoration: InputDecoration(
+                                    suffixText: 'km',
+                                    filled: true,
+                                    fillColor: AdminTheme.canvasBg,
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderSubtle)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Special Instructions
+                      const Text(
+                        'DISPATCH NOTES / SPECIAL INSTRUCTIONS',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AdminTheme.textMuted, letterSpacing: 0.6),
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: _instructionsController,
+                        maxLines: 2,
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                        decoration: InputDecoration(
+                          hintText: 'Enter special transit notes for the driver...',
+                          filled: true,
+                          fillColor: AdminTheme.canvasBg,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderSubtle)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Modal Footer Actions
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: AdminTheme.borderSubtle)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+                    child: const Text('CANCEL', style: TextStyle(color: AdminTheme.textMuted, fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(width: 14),
+                  ElevatedButton(
+                    onPressed: _isSubmitting ? null : _submitRequest,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AdminTheme.crimsonRed,
+                      foregroundColor: AdminTheme.crispWhite,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 2,
+                    ),
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.send_rounded, size: 16),
+                              SizedBox(width: 8),
+                              Text('DISPATCH TO DRIVER', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+                            ],
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPresetChip({required String label, required String id, required bool isSelected}) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => _selectPresetDriver(id, label),
+      selectedColor: AdminTheme.crimsonRed.withAlpha(25),
+      labelStyle: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+        color: isSelected ? AdminTheme.crimsonRed : AdminTheme.textDark,
+      ),
+      side: BorderSide(
+        color: isSelected ? AdminTheme.crimsonRed : AdminTheme.borderSubtle,
+        width: isSelected ? 1.5 : 1.0,
+      ),
+    );
+  }
+}
+
