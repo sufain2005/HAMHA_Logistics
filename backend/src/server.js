@@ -80,6 +80,17 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.log(`\n⚡ Notice: Port ${PORT} is already active and serving HAMHA Logistics.`);
+    console.log(`👉 Backend is live on http://localhost:${PORT}`);
+    process.exit(0);
+  } else {
+    console.error('❌ Server startup error:', err);
+    process.exit(1);
+  }
+});
+
 server.listen(PORT, async () => {
   console.log(`
 =====================================================

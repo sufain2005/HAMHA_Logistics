@@ -1,10 +1,15 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
-const connectionString = process.env.DATABASE_URL;
+let connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
   console.warn('⚠️ WARNING: DATABASE_URL is not set in environment variables. Set it in .env before executing database queries.');
+} else {
+  // Automatically eliminate libpq SSL security warning for Neon PostgreSQL connections
+  if (connectionString.includes('sslmode=') && !connectionString.includes('uselibpqcompat=')) {
+    connectionString += (connectionString.includes('?') ? '&' : '?') + 'uselibpqcompat=true';
+  }
 }
 
 const pool = new Pool({
