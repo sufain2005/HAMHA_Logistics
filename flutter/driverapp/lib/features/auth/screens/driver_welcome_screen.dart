@@ -37,7 +37,7 @@ class _DriverWelcomeScreenState extends State<DriverWelcomeScreen> {
 
     try {
       final res = await DriverApiService().sendOtpForLogin(phone: phone);
-      final mockCode = res['otpVerification']?['mockCode'] ?? '889900';
+      final mockCode = res['mockCode'] ?? res['otpVerification']?['mockCode'] ?? res['otp'] ?? '123456';
 
       if (!mounted) return;
       Navigator.push(
@@ -190,7 +190,7 @@ class _DriverWelcomeScreenState extends State<DriverWelcomeScreen> {
                         // Demo Pilot quick login shortcut
                         OutlinedButton(
                           onPressed: () {
-                            _phoneController.text = '+91 98234 11209';
+                            _phoneController.text = '+91 98451 22340';
                             _handleContinue();
                           },
                           style: OutlinedButton.styleFrom(
@@ -206,7 +206,7 @@ class _DriverWelcomeScreenState extends State<DriverWelcomeScreen> {
                                 Icon(Icons.bolt, color: DriverTheme.crimsonRed, size: 18),
                                 SizedBox(width: 6),
                                 Text(
-                                  'DEMO DRIVER (RAJESH KUMAR)',
+                                  'DEMO DRIVER (VIKRAM - MH 12 AB 1234)',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w800,

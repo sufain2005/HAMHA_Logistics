@@ -176,6 +176,10 @@ exports.login = async (req, res, next) => {
   try {
     const { email, phone, password, expectedRole } = req.body;
 
+    if ((typeof email !== 'string' && typeof phone !== 'string') ||
+        typeof password !== 'string' || password.length === 0) {
+      return res.status(400).json({ success: false, message: 'Email or phone and password are required.' });
+    }
     if (!email && !phone) {
       return res.status(400).json({ success: false, message: 'Email or phone number is required.' });
     }
@@ -194,7 +198,7 @@ exports.login = async (req, res, next) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials. User not found.' });
+      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
 
     const user = result.rows[0];
@@ -209,7 +213,7 @@ exports.login = async (req, res, next) => {
 
     if (password) {
       const isMatch = await bcrypt.compare(password, user.password_hash);
-      if (!isMatch && password !== 'Driver@123456' && password !== 'Admin@123456') {
+      if (!isMatch) {
         return res.status(401).json({ success: false, message: 'Invalid email or password.' });
       }
     }
@@ -230,26 +234,116 @@ exports.login = async (req, res, next) => {
 };
 
 /**
- * Verify OTP (Customer onboarding/verification)
+ * Send Dummy OTP for phone verification
  */
-exports.verifyOtp = async (req, res, next) => {
+exports.sendOtp = async (req, res, next) => {
   try {
-    const { phone, otpCode } = req.body;
-
-    if (!phone || !otpCode) {
-      return res.status(400).json({ success: false, message: 'Phone and OTP code are required.' });
+    const { phone } = req.body;
+    if (!phone || typeof phone !== 'string' || phone.trim().length < 8) {
+      return res.status(400).json({ success: false, message: 'Valid mobile number is required.' });
     }
 
-    // Standard demo OTP validation (in production, integrate Twilio/MessageBird)
-    if (otpCode !== '889900' && otpCode !== '123456') {
-      return res.status(400).json({ success: false, message: 'Invalid verification code.' });
-    }
+    const cleanPhone = phone.trim();
+    const dummyOtp = '123456';
 
-    await query('UPDATE users SET is_verified = TRUE WHERE phone = $1', [phone]);
+    console.log(`📱 [DUMMY OTP DISPATCH] Sent SMS verification OTP to ${cleanPhone}: ${dummyOtp}`);
 
     return res.json({
       success: true,
-      message: 'Phone number verified successfully.',
+      message: `Verification code sent to ${cleanPhone}`,
+      otp: dummyOtp,
+      mockCode: dummyOtp,
+      otpVerification: {
+        required: true,
+        mockCode: dummyOtp,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Verify Dummy OTP and authenticate / register user
+ */
+exports.verifyOtp = async (req, res, next) => {
+  try {
+    const { phone, otp, otpCode, name, email, role = 'driver' } = req.body;
+    const submittedOtp = (otp || otpCode || '').toString().trim();
+
+    if (!phone || phone.trim().length < 8) {
+      return res.status(400).json({ success: false, message: 'Phone number is required.' });
+    }
+
+    const cleanPhone = phone.trim();
+    const acceptedOtps = ['123456', '889900', '112233'];
+
+    if (!acceptedOtps.includes(submittedOtp)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid OTP code. Please enter dummy OTP: 123456',
+      });
+    }
+
+    // Lookup user by phone
+    let userResult = await query(
+      `SELECT id, name, email, phone, role, is_verified 
+       FROM users 
+       WHERE phone = $1 
+          OR REPLACE(phone, ' ', '') = REPLACE($1, ' ', '')
+          OR REPLACE(REPLACE(phone, ' ', ''), '+91', '') = REPLACE(REPLACE($1, ' ', ''), '+91', '')
+       LIMIT 1`,
+      [cleanPhone]
+    );
+
+    let user;
+
+    if (userResult.rows.length > 0) {
+      user = userResult.rows[0];
+      await query('UPDATE users SET is_verified = TRUE WHERE id = $1', [user.id]);
+      user.is_verified = true;
+    } else {
+      // Auto-create driver in database
+      const salt = await bcrypt.genSalt(10);
+      const defaultPass = await bcrypt.hash('Driver@123456', salt);
+      const assignedName = name || 'Driver Partner';
+      const assignedEmail = email || `driver.${cleanPhone.replace(/[^0-9]/g, '').slice(-8)}@hamhadrive.com`;
+
+      const insertRes = await query(
+        `INSERT INTO users (name, email, phone, password_hash, role, is_verified)
+         VALUES ($1, $2, $3, $4, $5, TRUE)
+         ON CONFLICT (email) DO UPDATE SET phone = EXCLUDED.phone, is_verified = TRUE
+         RETURNING id, name, email, phone, role, is_verified, created_at`,
+        [assignedName, assignedEmail.toLowerCase(), cleanPhone, defaultPass, role]
+      );
+      user = insertRes.rows[0];
+
+      if (role === 'driver') {
+        const plate = `MH-${Math.floor(10 + Math.random() * 89)}-AB-${Math.floor(1000 + Math.random() * 8999)}`;
+        await query(
+          `INSERT INTO vehicles (driver_id, plate_number, model, type, is_online, is_available)
+           VALUES ($1, $2, 'Tata Ace Gold 1.5T', 'truck', TRUE, TRUE)
+           ON CONFLICT (driver_id) DO NOTHING`,
+          [user.id, plate]
+        );
+      }
+    }
+
+    // Attach vehicle info if driver
+    let vehicle = null;
+    if (user.role === 'driver') {
+      const vRes = await query('SELECT * FROM vehicles WHERE driver_id = $1 LIMIT 1', [user.id]);
+      if (vRes.rows.length > 0) vehicle = vRes.rows[0];
+    }
+
+    const token = generateToken(user);
+
+    return res.json({
+      success: true,
+      message: 'OTP verified successfully.',
+      user,
+      vehicle,
+      token,
     });
   } catch (error) {
     next(error);

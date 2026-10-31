@@ -1,17 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const driverController = require('../controllers/driver.controller');
-const { authenticateJWT, optionalAuthenticateJWT, requireRole } = require('../middleware/auth');
+const { authenticateJWT, requireRole } = require('../middleware/auth');
+
+router.use(authenticateJWT, requireRole('driver'));
 
 // Search for Work in State & Contact Owner (3-Day Load Board) - accessible for state querying
-router.get('/truck-requirements/search', optionalAuthenticateJWT, driverController.searchTruckRequirements);
-router.post('/truck-requirements/:id/contact', optionalAuthenticateJWT, driverController.contactOwnerForRequirement);
+router.get('/truck-requirements/search', driverController.searchTruckRequirements);
+router.post('/truck-requirements/:id/contact', driverController.contactOwnerForRequirement);
 
 // Active & Delivered Consignments (open to authenticated driver sessions)
-router.get('/orders/current', optionalAuthenticateJWT, driverController.getCurrentOrder);
-router.patch('/orders/:orderId/status', optionalAuthenticateJWT, driverController.updateOrderStatus);
-router.put('/orders/:orderId/status', optionalAuthenticateJWT, driverController.updateOrderStatus);
-router.get('/orders/delivered', optionalAuthenticateJWT, driverController.getDeliveredOrders);
+router.get('/orders/current', driverController.getCurrentOrder);
+router.patch('/orders/:orderId/status', driverController.updateOrderStatus);
+router.put('/orders/:orderId/status', driverController.updateOrderStatus);
+router.get('/orders/delivered', driverController.getDeliveredOrders);
 
 // All operational driver endpoints strictly restricted to authenticated DRIVERS
 router.use(authenticateJWT);

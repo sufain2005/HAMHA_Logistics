@@ -1,6 +1,8 @@
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+
 import '../constants/app_constants.dart';
 import '../models/user_model.dart';
 import '../models/quote_model.dart';
@@ -97,35 +99,14 @@ class ApiClient {
         isDemoMode = false;
         return data;
       } else {
-        final errorMsg = data['error']?['message'] ?? data['message'] ?? 'Registration failed.';
+        final errorMsg =
+            data['error']?['message'] ??
+            data['message'] ??
+            'Registration failed.';
         throw Exception(errorMsg);
       }
-    } catch (e) {
-      debugPrint('Backend connection note: $e. Activating local profile.');
-      isDemoMode = true;
-      currentUser = UserModel(
-        id: 'usr-${DateTime.now().millisecondsSinceEpoch}',
-        name: cleanName.isNotEmpty ? cleanName : 'Valued Shipper',
-        email: cleanEmail.isNotEmpty ? cleanEmail : 'customer@hamha.com',
-        phone: cleanPhone.isNotEmpty ? cleanPhone : '+91 98765 43210',
-        role: 'customer',
-        isVerified: true,
-        companyName: 'Apex Logistics & Supplies',
-        gstin: '27AAACA9876Q1Z5',
-        primaryAddress: 'Plot 42, Bhiwandi Industrial Corridor, Thane, Maharashtra',
-        upiId: '${cleanName.toLowerCase().replaceAll(' ', '')}@okaxis',
-        whatsappAlerts: true,
-      );
-      _cachedProfiles[cleanEmail] = currentUser!;
-      setToken('mock-jwt-token-demo');
-
-      return {
-        'success': true,
-        'message': 'Account created successfully',
-        'token': _authToken,
-        'user': currentUser!.toJson(),
-        'otpVerification': {'required': true, 'mockCode': '889900'},
-      };
+    } catch (_) {
+      rethrow;
     }
   }
 
@@ -158,53 +139,16 @@ class ApiClient {
         isDemoMode = false;
         return data;
       } else {
-        final errorMsg = data['error']?['message'] ?? data['message'] ?? 'Invalid email or password.';
+        final errorMsg =
+            data['error']?['message'] ??
+            data['message'] ??
+            'Invalid email or password.';
         throw Exception(errorMsg);
       }
-    } catch (e) {
-      isDemoMode = true;
-
-      if (_cachedProfiles.containsKey(cleanEmail)) {
-        currentUser = _cachedProfiles[cleanEmail];
-      } else {
-        String derivedName = 'Customer';
-        if (cleanEmail.contains('@')) {
-          final prefix = cleanEmail.split('@').first;
-          if (prefix.isNotEmpty) {
-            derivedName = prefix[0].toUpperCase() + (prefix.length > 1 ? prefix.substring(1) : '');
-          }
-        }
-
-        currentUser = UserModel(
-          id: 'usr-${DateTime.now().millisecondsSinceEpoch}',
-          name: derivedName,
-          email: cleanEmail,
-          phone: '+91 98765 43210',
-          role: 'customer',
-          isVerified: true,
-          companyName: 'Apex Commercial Logistics',
-          gstin: '27AAACA9876Q1Z5',
-          primaryAddress: 'Plot 42, Bhiwandi Industrial Corridor, Thane, Maharashtra',
-          upiId: '${derivedName.toLowerCase()}@okhdfcbank',
-          whatsappAlerts: true,
-        );
-        _cachedProfiles[cleanEmail] = currentUser!;
-      }
-
-      setToken('mock-jwt-token-demo');
-
-      return {
-        'success': true,
-        'message': 'Logged in successfully',
-        'token': _authToken,
-        'user': currentUser!.toJson(),
-      };
+    } catch (_) {
+      rethrow;
     }
   }
-
-  // ==========================================
-  // PROFILE UPDATE FLOW
-  // ==========================================
 
   Future<UserModel> updateProfile({
     required String name,
@@ -222,7 +166,9 @@ class ApiClient {
 
     currentUser = UserModel(
       id: currentUser?.id ?? 'usr-001',
-      name: cleanName.isNotEmpty ? cleanName : (currentUser?.name ?? 'Customer'),
+      name: cleanName.isNotEmpty
+          ? cleanName
+          : (currentUser?.name ?? 'Customer'),
       email: cleanEmail.isNotEmpty ? cleanEmail : (currentUser?.email ?? ''),
       phone: cleanPhone.isNotEmpty ? cleanPhone : (currentUser?.phone ?? ''),
       role: currentUser?.role ?? 'customer',
@@ -259,53 +205,16 @@ class ApiClient {
     return currentUser!;
   }
 
-  Future<void> verifyOtp({required String phone, required String otpCode}) async {
-    if (isDemoMode) {
-      if (currentUser != null) {
-        currentUser = UserModel(
-          id: currentUser!.id,
-          name: currentUser!.name,
-          email: currentUser!.email,
-          phone: currentUser!.phone,
-          role: currentUser!.role,
-          isVerified: true,
-          companyName: currentUser!.companyName,
-          gstin: currentUser!.gstin,
-          primaryAddress: currentUser!.primaryAddress,
-          upiId: currentUser!.upiId,
-          whatsappAlerts: currentUser!.whatsappAlerts,
-        );
-      }
-      return;
-    }
-
+  Future<void> verifyOtp({
+    required String phone,
+    required String otpCode,
+  }) async {
     try {
-      final response = await http
-          .post(
-            Uri.parse('${AppConstants.baseUrl}/auth/verify-otp'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'phone': phone, 'otpCode': otpCode}),
-          )
-          .timeout(const Duration(seconds: 4));
-
-      final data = jsonDecode(response.body);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        if (currentUser != null) {
-          currentUser = UserModel(
-            id: currentUser!.id,
-            name: currentUser!.name,
-            email: currentUser!.email,
-            phone: currentUser!.phone,
-            role: currentUser!.role,
-            isVerified: true,
-            companyName: currentUser!.companyName,
-            gstin: currentUser!.gstin,
-            primaryAddress: currentUser!.primaryAddress,
-            upiId: currentUser!.upiId,
-            whatsappAlerts: currentUser!.whatsappAlerts,
-          );
-        }
-      }
+      await http.post(
+        Uri.parse('${AppConstants.baseUrl}/auth/verify-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'phone': phone, 'otp': otpCode, 'role': 'customer'}),
+      ).timeout(const Duration(seconds: 4));
     } catch (_) {}
   }
 
@@ -316,7 +225,10 @@ class ApiClient {
   Future<Map<String, dynamic>> fetchAdminTariffs() async {
     try {
       final response = await http
-          .get(Uri.parse('${AppConstants.baseUrl}/customer/tariffs'), headers: _headers)
+          .get(
+            Uri.parse('${AppConstants.baseUrl}/customer/tariffs'),
+            headers: _headers,
+          )
           .timeout(const Duration(seconds: 4));
 
       final data = jsonDecode(response.body);
@@ -366,8 +278,9 @@ class ApiClient {
     final distanceKm = customDistanceKm ?? 125.0;
     final int durationMin = (distanceKm / 40.0 * 60).round() + 20;
 
-    final double baseFee = (activeTariffs['baseFee'] as num?)?.toDouble() ?? 350.0;
-    
+    final double baseFee =
+        (activeTariffs['baseFee'] as num?)?.toDouble() ?? 350.0;
+
     // Per KM rate for the chosen vehicle or default
     double kmRate = (activeTariffs['perKmRate'] as num?)?.toDouble() ?? 25.0;
     final vehicleRates = activeTariffs['vehicleRates'] as Map<String, dynamic>?;
@@ -376,18 +289,26 @@ class ApiClient {
     }
 
     final double distFee = distanceKm * kmRate;
-    
+
     // Weight surcharge based on Admin rate
-    final double weightAllowance = (activeTariffs['weightBaseAllowanceKg'] as num?)?.toDouble() ?? 10.0;
-    final double perKgRate = (activeTariffs['perKgRate'] as num?)?.toDouble() ?? 18.0;
-    final double excessWeight = weightKg > weightAllowance ? (weightKg - weightAllowance) : 0.0;
+    final double weightAllowance =
+        (activeTariffs['weightBaseAllowanceKg'] as num?)?.toDouble() ?? 10.0;
+    final double perKgRate =
+        (activeTariffs['perKgRate'] as num?)?.toDouble() ?? 18.0;
+    final double excessWeight = weightKg > weightAllowance
+        ? (weightKg - weightAllowance)
+        : 0.0;
     final double weightFee = excessWeight * perKgRate;
 
     final double subtotal = baseFee + distFee + weightFee;
-    final double gstRate = (activeTariffs['gstPercent'] as num?)?.toDouble() ?? 18.0;
+    final double gstRate =
+        (activeTariffs['gstPercent'] as num?)?.toDouble() ?? 18.0;
     final double gst = subtotal * (gstRate / 100.0);
-    final double minFare = (activeTariffs['minimumFare'] as num?)?.toDouble() ?? 250.0;
-    final double total = (subtotal + gst) < minFare ? minFare : (subtotal + gst);
+    final double minFare =
+        (activeTariffs['minimumFare'] as num?)?.toDouble() ?? 250.0;
+    final double total = (subtotal + gst) < minFare
+        ? minFare
+        : (subtotal + gst);
 
     return QuoteModel(
       cargoType: cargoType,
@@ -423,20 +344,30 @@ class ApiClient {
       final queryParams = <String, String>{
         'weightKg': weightKg.toString(),
         'distanceKm': distanceKm.toString(),
-        if (pickupState != null && pickupState.isNotEmpty) 'pickupState': pickupState,
-        if (pickupCity != null && pickupCity.isNotEmpty) 'pickupCity': pickupCity,
-        if (dropoffState != null && dropoffState.isNotEmpty) 'dropoffState': dropoffState,
-        if (dropoffCity != null && dropoffCity.isNotEmpty) 'dropoffCity': dropoffCity,
+        if (pickupState != null && pickupState.isNotEmpty)
+          'pickupState': pickupState,
+        if (pickupCity != null && pickupCity.isNotEmpty)
+          'pickupCity': pickupCity,
+        if (dropoffState != null && dropoffState.isNotEmpty)
+          'dropoffState': dropoffState,
+        if (dropoffCity != null && dropoffCity.isNotEmpty)
+          'dropoffCity': dropoffCity,
       };
 
-      final uri = Uri.parse('${AppConstants.baseUrl}/customer/owner-corridors').replace(queryParameters: queryParams);
-      final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 5));
+      final uri = Uri.parse('${AppConstants.baseUrl}/customer/owner-corridors')
+          .replace(queryParameters: queryParams);
+      final response = await http
+          .get(uri, headers: _headers)
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
         if (data['corridors'] is List) {
           final list = (data['corridors'] as List)
-              .map((c) => OwnerCorridorRouteModel.fromJson(c as Map<String, dynamic>))
+              .map(
+                (c) =>
+                    OwnerCorridorRouteModel.fromJson(c as Map<String, dynamic>),
+              )
               .toList();
           return list;
         }
@@ -565,16 +496,16 @@ class ApiClient {
 
     _userOrders.insert(0, createdOrder);
 
-    return {
-      'success': true,
-      'order': createdOrder.toJson(),
-    };
+    return {'success': true, 'order': createdOrder.toJson()};
   }
 
   Future<List<OrderModel>> getMyOrders() async {
     try {
       final response = await http
-          .get(Uri.parse('${AppConstants.baseUrl}/customer/orders'), headers: _headers)
+          .get(
+            Uri.parse('${AppConstants.baseUrl}/customer/orders'),
+            headers: _headers,
+          )
           .timeout(const Duration(seconds: 4));
 
       final data = jsonDecode(response.body);

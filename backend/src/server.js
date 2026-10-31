@@ -56,7 +56,7 @@ app.get('/api/health', async (req, res) => {
     res.status(503).json({
       status: 'degraded',
       service: 'HAMHA Logistics API Engine',
-      error: 'Database connection failed: ' + err.message,
+      error: 'Database connection unavailable.',
     });
   }
 });

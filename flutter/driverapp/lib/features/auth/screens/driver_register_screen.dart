@@ -53,7 +53,7 @@ class _DriverRegisterScreenState extends State<DriverRegisterScreen> {
         city: city,
       );
 
-      final mockCode = res['otpVerification']?['mockCode'] ?? '889900';
+      final mockCode = res['mockCode'] ?? res['otpVerification']?['mockCode'] ?? res['otp'] ?? '123456';
 
       if (!mounted) return;
       Navigator.push(

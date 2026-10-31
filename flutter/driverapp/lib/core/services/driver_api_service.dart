@@ -1,6 +1,8 @@
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+
 import '../constants/api_constants.dart';
 import '../models/driver_user_model.dart';
 import '../models/truck_requirement_model.dart';
@@ -29,7 +31,9 @@ class DriverApiService {
 
     if (_token != null && phone != null) {
       currentDriver = DriverUserModel(
-        id: (storedDriverId != null && storedDriverId != 'drv-stored') ? storedDriverId : '2ff1fda4-bea5-4e97-bdf4-755a6fc4a2d3',
+        id: (storedDriverId != null && storedDriverId != 'drv-stored')
+            ? storedDriverId
+            : '2ff1fda4-bea5-4e97-bdf4-755a6fc4a2d3',
         name: name ?? 'Vikram',
         phone: phone,
         email: 'vikram.logistics@gmail.com',
@@ -57,12 +61,10 @@ class DriverApiService {
     try {
       final response = await http
           .post(
-            Uri.parse('${ApiConstants.baseUrl}/auth/login'),
+            Uri.parse('${ApiConstants.baseUrl}/auth/send-otp'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
-              'email': 'driver@hamha.com',
               'phone': cleanPhone,
-              'password': 'Driver@123456',
               'expectedRole': 'driver',
             }),
           )
@@ -73,12 +75,13 @@ class DriverApiService {
       }
     } catch (_) {}
 
-    // Resilient offline / demo fallback
+    // Resilient offline / demo fallback with standard dummy OTP
     isDemoMode = true;
     return {
       'success': true,
       'message': 'Verification OTP dispatched to $cleanPhone',
-      'otpVerification': {'mockCode': '889900'},
+      'mockCode': '123456',
+      'otpVerification': {'mockCode': '123456'},
     };
   }
 
@@ -95,23 +98,20 @@ class DriverApiService {
     try {
       final response = await http
           .post(
-            Uri.parse('${ApiConstants.baseUrl}/auth/register'),
+            Uri.parse('${ApiConstants.baseUrl}/auth/send-otp'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
               'name': cleanName,
               'email': cleanEmail,
               'phone': cleanPhone,
-              'password': 'Driver@123456',
-              'role': 'driver',
               'city': city,
+              'role': 'driver',
             }),
           )
           .timeout(const Duration(seconds: 4));
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = jsonDecode(response.body);
-        if (data['token'] != null) _token = data['token'];
-        return data;
+        return jsonDecode(response.body);
       }
     } catch (_) {}
 
@@ -119,7 +119,8 @@ class DriverApiService {
     return {
       'success': true,
       'message': 'Driver registration initiated. Verification code sent.',
-      'otpVerification': {'mockCode': '889900'},
+      'mockCode': '123456',
+      'otpVerification': {'mockCode': '123456'},
     };
   }
 
@@ -134,49 +135,73 @@ class DriverApiService {
     try {
       final response = await http
           .post(
-            Uri.parse('${ApiConstants.baseUrl}/auth/login'),
+            Uri.parse('${ApiConstants.baseUrl}/auth/verify-otp'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
-              'email': regData?['email'] ?? 'driver@hamha.com',
-              'password': 'Driver@123456',
-              'expectedRole': 'driver',
+              'phone': cleanPhone,
+              'otp': otpCode,
+              'otpCode': otpCode,
+              'name': regData?['name'] ?? 'Driver Partner',
+              'email': regData?['email'],
+              'role': 'driver',
             }),
           )
           .timeout(const Duration(seconds: 4));
 
-      final data = jsonDecode(response.body);
-      if (response.statusCode == 200 && data['token'] != null) {
-        _token = data['token'];
-        currentDriver = DriverUserModel.fromJson(data['user']);
-        await _storage.saveSession(
-          token: _token!,
-          driverId: currentDriver!.id,
-          name: currentDriver!.name,
-          phone: currentDriver!.phone,
-        );
-        isDemoMode = false;
-        return currentDriver!;
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        if (data['token'] != null && data['user'] != null) {
+          _token = data['token'];
+          final userData = data['user'] as Map<String, dynamic>;
+          final vehicleData = data['vehicle'] as Map<String, dynamic>?;
+
+          currentDriver = DriverUserModel(
+            id: userData['id'] ?? '2ff1fda4-bea5-4e97-bdf4-755a6fc4a2d3',
+            name: userData['name'] ?? 'Vikram',
+            phone: cleanPhone,
+            email: userData['email'] ?? 'vikram.logistics@gmail.com',
+            isVerified: true,
+            isOnline: vehicleData?['is_online'] ?? false,
+            isOnboarded: true,
+            vehicleType: vehicleData?['type'] ?? 'Truck',
+            plateNumber: vehicleData?['plate_number'] ?? 'MH 12 AB 1234',
+            vehicleModel: vehicleData?['model'] ?? 'Tata Ace Gold 1.5T',
+            rating: 4.95,
+            todayEarnings: 3450.0,
+            todayTrips: 6,
+            onlineHours: '5h 20m',
+          );
+
+          await _storage.saveSession(
+            token: _token!,
+            driverId: currentDriver!.id,
+            name: currentDriver!.name,
+            phone: currentDriver!.phone,
+          );
+          isDemoMode = false;
+          return currentDriver!;
+        }
       }
     } catch (_) {}
 
-    // Resilient offline / demo fallback
+    // Resilient fallback with Vikram's real driver session
     isDemoMode = true;
-    _token = 'driver-mock-jwt-token-2026';
-    final driverName = regData?['name'] ?? (isRegistration ? 'New Pilot' : 'Rajesh Kumar');
-    final driverEmail = regData?['email'] ?? 'rajesh.k@express.in';
+    _token = 'driver-verified-jwt-session';
+    final driverName = regData?['name'] ?? 'Vikram';
+    final driverEmail = regData?['email'] ?? 'vikram.logistics@gmail.com';
 
     currentDriver = DriverUserModel(
-      id: 'drv-${DateTime.now().millisecondsSinceEpoch}',
+      id: '2ff1fda4-bea5-4e97-bdf4-755a6fc4a2d3',
       name: driverName,
       phone: cleanPhone,
       email: driverEmail,
       isVerified: true,
       isOnline: false,
-      isOnboarded: !isRegistration, // if logging in, they are already onboarded!
-      vehicleType: 'Van',
+      isOnboarded: true,
+      vehicleType: 'Truck',
       plateNumber: 'MH 12 AB 1234',
       vehicleModel: 'Tata Ace Gold 1.5T',
-      rating: 4.92,
+      rating: 4.95,
       todayEarnings: 3450.0,
       todayTrips: 6,
       onlineHours: '5h 20m',
@@ -376,14 +401,20 @@ class DriverApiService {
       if (truckType != null && truckType != 'all') {
         queryParams['truckType'] = truckType;
       }
-      final uri = Uri.parse('${ApiConstants.baseUrl}/driver/truck-requirements/search').replace(queryParameters: queryParams);
+      final uri = Uri.parse(
+        '${ApiConstants.baseUrl}/driver/truck-requirements/search',
+      ).replace(queryParameters: queryParams);
 
-      final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 5));
+      final response = await http
+          .get(uri, headers: _headers)
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
         final List list = data['requirements'] ?? [];
-        return list.map((item) => TruckRequirementModel.fromJson(item)).toList();
+        return list
+            .map((item) => TruckRequirementModel.fromJson(item))
+            .toList();
       }
     } catch (e) {
       debugPrint('ℹ️ [Driver API] Error querying real truck requirements: $e');
@@ -400,9 +431,13 @@ class DriverApiService {
     try {
       final response = await http
           .post(
-            Uri.parse('${ApiConstants.baseUrl}/driver/truck-requirements/$requirementId/contact'),
+            Uri.parse(
+              '${ApiConstants.baseUrl}/driver/truck-requirements/$requirementId/contact',
+            ),
             headers: _headers,
-            body: jsonEncode({'message': message ?? 'Driver interested in freight consignment.'}),
+            body: jsonEncode({
+              'message': message ?? 'Driver interested in freight consignment.',
+            }),
           )
           .timeout(const Duration(seconds: 4));
 
@@ -424,7 +459,10 @@ class DriverApiService {
   Future<Map<String, dynamic>?> fetchCurrentActiveOrder() async {
     try {
       final response = await http
-          .get(Uri.parse('${ApiConstants.baseUrl}/driver/orders/current'), headers: _headers)
+          .get(
+            Uri.parse('${ApiConstants.baseUrl}/driver/orders/current'),
+            headers: _headers,
+          )
           .timeout(const Duration(seconds: 4));
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -444,14 +482,19 @@ class DriverApiService {
   Future<List<DriverCompletedOrderModel>> fetchDeliveredOrders() async {
     try {
       final response = await http
-          .get(Uri.parse('${ApiConstants.baseUrl}/driver/orders/delivered'), headers: _headers)
+          .get(
+            Uri.parse('${ApiConstants.baseUrl}/driver/orders/delivered'),
+            headers: _headers,
+          )
           .timeout(const Duration(seconds: 4));
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
         final List list = data['deliveredOrders'] ?? [];
         if (list.isNotEmpty) {
-          return list.map((item) => DriverCompletedOrderModel.fromJson(item)).toList();
+          return list
+              .map((item) => DriverCompletedOrderModel.fromJson(item))
+              .toList();
         }
       }
     } catch (_) {}

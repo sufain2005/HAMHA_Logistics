@@ -44,8 +44,17 @@ function initializeSocketIO(io) {
     /**
      * Join specific order tracking room (Customer, Driver, or Admin monitoring an order)
      */
-    socket.on('order:join', ({ orderId }) => {
+    socket.on('order:join', async ({ orderId } = {}) => {
       if (!orderId) return;
+      try {
+        const result = await query(
+          'SELECT id FROM orders WHERE id = $1 AND ($2 = \'admin\' OR customer_id = $3 OR driver_id = $3)',
+          [orderId, role, userId]
+        );
+        if (!result.rows.length) return;
+      } catch (_) {
+        return;
+      }
       const room = `order:${orderId}`;
       socket.join(room);
       console.log(`📍 [Socket.io] ${role} (${userId}) joined room: ${room}`);
@@ -59,7 +68,7 @@ function initializeSocketIO(io) {
     /**
      * Leave order tracking room
      */
-    socket.on('order:leave', ({ orderId }) => {
+    socket.on('order:leave', ({ orderId } = {}) => {
       if (!orderId) return;
       socket.leave(`order:${orderId}`);
       console.log(`🚪 [Socket.io] User left room: order:${orderId}`);
@@ -71,9 +80,15 @@ function initializeSocketIO(io) {
      */
     socket.on('driver:location_update', async (payload) => {
       try {
+        if (role !== 'driver' || !payload) return;
         const { orderId, lon, lat, heading = 0, speedKmh = 0 } = payload;
 
-        if (lon === undefined || lat === undefined) return;
+        if (![lon, lat, heading, speedKmh].every(value => typeof value === 'number' && Number.isFinite(value)) ||
+            lon < -180 || lon > 180 || lat < -90 || lat > 90 || speedKmh < 0) return;
+        if (orderId) {
+          const result = await query('SELECT id FROM orders WHERE id = $1 AND driver_id = $2', [orderId, userId]);
+          if (!result.rows.length) return;
+        }
 
         const updateData = {
           driverId: userId,
@@ -113,8 +128,9 @@ function initializeSocketIO(io) {
     /**
      * Driver toggles online/offline via socket
      */
-    socket.on('driver:toggle_online', async ({ isOnline }) => {
+    socket.on('driver:toggle_online', async ({ isOnline } = {}) => {
       try {
+        if (role !== 'driver' || typeof isOnline !== 'boolean') return;
         await query(
           `UPDATE vehicles SET is_online = $1, updated_at = NOW() WHERE driver_id = $2`,
           [isOnline, userId]

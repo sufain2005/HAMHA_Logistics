@@ -15,7 +15,7 @@ class DriverOtpScreen extends StatefulWidget {
   const DriverOtpScreen({
     super.key,
     required this.phoneNumber,
-    this.mockCode = '889900',
+    this.mockCode = '123456',
     this.isRegistration = false,
     this.registrationData,
   });

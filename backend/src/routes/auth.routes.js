@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
-const { authenticateJWT } = require('../middleware/auth');
+const { authenticateJWT, requireRole } = require('../middleware/auth');
 
 // Public Auth Endpoints
 router.post('/register', authController.register);
-router.post('/register-owner', authController.registerOwner);
+router.post('/register-owner', authenticateJWT, requireRole('admin'), authController.registerOwner);
 router.post('/login', authController.login);
+router.post('/send-otp', authController.sendOtp);
 router.post('/verify-otp', authController.verifyOtp);
 
 // Authenticated Self Profile

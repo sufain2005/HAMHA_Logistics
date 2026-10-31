@@ -1,6 +1,8 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 import '../constants/admin_constants.dart';
 import '../auth/admin_rbac.dart';
 
@@ -73,7 +75,9 @@ class AdminAuthService {
     // 2. Validate Real OTP if provided
     if (otpCode != null && otpCode.isNotEmpty) {
       if (otpCode != '889900' && otpCode != '123456') {
-        throw Exception("Invalid OTP verification code. Please enter the valid 6-digit PIN sent to your registered mobile.");
+        throw Exception(
+          "Invalid OTP verification code. Please enter the valid 6-digit PIN sent to your registered mobile.",
+        );
       }
     }
 
@@ -85,7 +89,8 @@ class AdminAuthService {
             body: jsonEncode({
               'email': cleanEmail,
               'password': password,
-              'expectedRole': 'admin', // Strict backend role check for owner/admin
+              'expectedRole':
+                  'admin', // Strict backend role check for owner/admin
             }),
           )
           .timeout(const Duration(seconds: 4));
@@ -98,47 +103,31 @@ class AdminAuthService {
 
         // Strict role validation
         if (userJson['role'] != 'admin') {
-          throw Exception("RBAC Lockout: User role is '${userJson['role']}'. Access restricted to 'admin' (Owner).");
+          throw Exception(
+            "RBAC Lockout: User role is '${userJson['role']}'. Access restricted to 'admin' (Owner).",
+          );
         }
 
         _jwtToken = token;
-        currentAdmin = AdminUserModel.fromJson(userJson, token: token, overrideScope: AdminScope.fullAdmin);
+        currentAdmin = AdminUserModel.fromJson(
+          userJson,
+          token: token,
+          overrideScope: AdminScope.fullAdmin,
+        );
 
         await _saveSession(currentAdmin!);
         isDemoMode = false;
         return currentAdmin!;
       } else if (response.statusCode == 403) {
-        throw Exception(data['message'] ?? 'Forbidden: Access restricted to authorized Fleet Owners.');
+        throw Exception(
+          data['message'] ??
+              'Forbidden: Access restricted to authorized Fleet Owners.',
+        );
       }
-    } catch (e) {
-      if (e.toString().contains('RBAC') || e.toString().contains('Forbidden') || e.toString().contains('Invalid OTP')) {
-        rethrow;
-      }
+    } catch (_) {
+      rethrow;
     }
-
-    // Fallback if backend is currently offline
-    isDemoMode = false;
-    _jwtToken = 'owner-jwt-token-2026-crimson';
-
-    currentAdmin = AdminUserModel(
-      id: 'adm-${DateTime.now().millisecondsSinceEpoch}',
-      name: 'Fleet Owner & Operator',
-      email: cleanEmail.isNotEmpty ? cleanEmail : 'owner@hamha.com',
-      phone: '+91 98201 00001',
-      companyName: 'HAMHA Freightways Ltd',
-      gstNumber: '27AAAAA0000A1Z5',
-      govtIdType: 'Aadhaar Card',
-      govtIdNumber: '9988 7766 5544',
-      vehiclesCount: 4,
-      role: 'admin',
-      scope: AdminScope.fullAdmin,
-      token: _jwtToken!,
-      isMfaVerified: true,
-      lastLogin: DateTime.now(),
-    );
-
-    await _saveSession(currentAdmin!);
-    return currentAdmin!;
+    throw Exception('Authentication failed. Check your credentials.');
   }
 
   Future<AdminUserModel> registerOwner({
@@ -157,7 +146,9 @@ class AdminAuthService {
     final cleanPhone = phone.trim();
 
     if (otpCode != '889900' && otpCode != '123456') {
-      throw Exception('Invalid OTP. Please enter the 6-digit verification code.');
+      throw Exception(
+        'Invalid OTP. Please enter the 6-digit verification code.',
+      );
     }
 
     try {
@@ -195,35 +186,13 @@ class AdminAuthService {
         await _saveSession(currentAdmin!);
         return currentAdmin!;
       } else {
-        throw Exception(data['message'] ?? 'Registration failed. Please check your details.');
+        throw Exception(
+          data['message'] ?? 'Registration failed. Please check your details.',
+        );
       }
-    } catch (e) {
-      if (e.toString().contains('already exists') || e.toString().contains('Invalid OTP')) {
-        rethrow;
-      }
+    } catch (_) {
+      rethrow;
     }
-
-    // Local state fallback if backend connection times out
-    _jwtToken = 'owner-jwt-registered-2026';
-    currentAdmin = AdminUserModel(
-      id: 'adm-${DateTime.now().millisecondsSinceEpoch}',
-      name: fullName.trim(),
-      email: cleanEmail,
-      phone: cleanPhone,
-      companyName: companyName.trim(),
-      gstNumber: gstNumber.trim().toUpperCase(),
-      govtIdType: govtIdType,
-      govtIdNumber: govtIdNumber.trim(),
-      vehiclesCount: vehicles.length,
-      role: 'admin',
-      scope: AdminScope.fullAdmin,
-      token: _jwtToken!,
-      isMfaVerified: true,
-      lastLogin: DateTime.now(),
-    );
-
-    await _saveSession(currentAdmin!);
-    return currentAdmin!;
   }
 
   Future<void> _saveSession(AdminUserModel admin) async {
@@ -244,4 +213,3 @@ class AdminAuthService {
     isDemoMode = false;
   }
 }
-

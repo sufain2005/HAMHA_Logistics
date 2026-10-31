@@ -15,7 +15,7 @@ if (!connectionString) {
 const pool = new Pool({
   connectionString,
   ssl: process.env.NODE_ENV === 'production' || (connectionString && connectionString.includes('neon.tech'))
-    ? { rejectUnauthorized: false }
+    ? { rejectUnauthorized: true }
     : false,
   max: 20,
   idleTimeoutMillis: 30000,
