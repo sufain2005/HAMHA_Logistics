@@ -120,13 +120,13 @@ class _DriverApprovalsScreenState extends State<DriverApprovalsScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) => AlertDialog(
-          backgroundColor: AdminTheme.sidebarBlack,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: AdminTheme.borderBlack)),
+          backgroundColor: AdminTheme.crispWhite,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: AdminTheme.borderSubtle)),
           title: Row(
             children: [
               const Icon(Icons.gpp_bad, color: AdminTheme.crimsonRed, size: 22),
               const SizedBox(width: 8),
-              const Text('Reject Driver Application', style: TextStyle(color: AdminTheme.crispWhite, fontSize: 16, fontWeight: FontWeight.w900)),
+              const Text('Reject Driver Application', style: TextStyle(color: AdminTheme.deepBlack, fontSize: 16, fontWeight: FontWeight.w900)),
             ],
           ),
           content: SizedBox(
@@ -137,19 +137,19 @@ class _DriverApprovalsScreenState extends State<DriverApprovalsScreen> {
               children: [
                 Text(
                   'Specify the statutory reason for rejecting ${app.name}\'s application (${app.licenseNumber}):',
-                  style: const TextStyle(color: AdminTheme.textLight, fontSize: 12),
+                  style: const TextStyle(color: AdminTheme.textDark, fontSize: 12),
                 ),
                 const SizedBox(height: 14),
                 const Text('SELECT REJECTION REASON', style: TextStyle(color: AdminTheme.textMuted, fontSize: 10, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
                   value: selectedPreset,
-                  dropdownColor: AdminTheme.surfaceBlack,
-                  style: const TextStyle(color: AdminTheme.crispWhite, fontSize: 12, fontWeight: FontWeight.w700),
+                  dropdownColor: AdminTheme.crispWhite,
+                  style: const TextStyle(color: AdminTheme.deepBlack, fontSize: 12, fontWeight: FontWeight.w700),
                   decoration: InputDecoration(
                     filled: true,
-                    fillColor: AdminTheme.surfaceBlack,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderBlack)),
+                    fillColor: AdminTheme.warmCream,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderSubtle)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
                   items: const [
@@ -168,13 +168,13 @@ class _DriverApprovalsScreenState extends State<DriverApprovalsScreen> {
                 TextField(
                   controller: reasonController,
                   maxLines: 3,
-                  style: const TextStyle(color: AdminTheme.crispWhite, fontSize: 12),
+                  style: const TextStyle(color: AdminTheme.deepBlack, fontSize: 12),
                   decoration: InputDecoration(
                     hintText: 'Additional auditor notes or specific missing document details...',
                     hintStyle: const TextStyle(color: AdminTheme.textMuted, fontSize: 11),
                     filled: true,
-                    fillColor: AdminTheme.surfaceBlack,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderBlack)),
+                    fillColor: AdminTheme.warmCream,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderSubtle)),
                   ),
                 ),
               ],
@@ -389,14 +389,14 @@ class _DriverApprovalsScreenState extends State<DriverApprovalsScreen> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: AdminTheme.surfaceBlack,
+                color: AdminTheme.warmCream,
                 shape: BoxShape.circle,
                 border: Border.all(color: app.statusColor, width: 2),
               ),
               child: Center(
                 child: Text(
                   app.name.split(' ').map((n) => n[0]).take(2).join(),
-                  style: const TextStyle(fontWeight: FontWeight.w900, color: AdminTheme.crispWhite, fontSize: 16),
+                  style: const TextStyle(fontWeight: FontWeight.w900, color: AdminTheme.deepBlack, fontSize: 16),
                 ),
               ),
             ),
@@ -568,8 +568,8 @@ class _DriverDocumentModalViewerState extends State<_DriverDocumentModalViewer> 
     final docNumbers = [app.licenseNumber, app.plateNumber, 'POL-COMM-2024-883'];
 
     return Dialog(
-      backgroundColor: AdminTheme.sidebarBlack,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: const BorderSide(color: AdminTheme.borderBlack)),
+      backgroundColor: AdminTheme.crispWhite,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: const BorderSide(color: AdminTheme.borderSubtle)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 30),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 820, maxHeight: 720),
@@ -580,7 +580,7 @@ class _DriverDocumentModalViewerState extends State<_DriverDocumentModalViewer> 
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
               decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: AdminTheme.borderBlack)),
+                border: Border(bottom: BorderSide(color: AdminTheme.borderSubtle)),
               ),
               child: Row(
                 children: [
@@ -592,7 +592,7 @@ class _DriverDocumentModalViewerState extends State<_DriverDocumentModalViewer> 
                       children: [
                         Text(
                           'KYC Document Verification: ${app.name}',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AdminTheme.crispWhite),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AdminTheme.deepBlack),
                         ),
                         Text(
                           '${app.phone} • Vehicle: ${app.vehicleModel} (${app.plateNumber})',
@@ -612,7 +612,7 @@ class _DriverDocumentModalViewerState extends State<_DriverDocumentModalViewer> 
             // Document Tabs
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              color: AdminTheme.surfaceBlack,
+              color: AdminTheme.warmCream,
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
@@ -639,9 +639,9 @@ class _DriverDocumentModalViewerState extends State<_DriverDocumentModalViewer> 
                       flex: 5,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.black,
+                          color: AdminTheme.warmCream,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AdminTheme.borderBlack),
+                          border: Border.all(color: AdminTheme.borderSubtle),
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: Stack(
@@ -649,7 +649,7 @@ class _DriverDocumentModalViewerState extends State<_DriverDocumentModalViewer> 
                           children: [
                             // Simulated Document Canvas
                             Container(
-                              color: const Color(0xFF1E293B),
+                              color: AdminTheme.deepBlack,
                               padding: const EdgeInsets.all(24),
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -717,9 +717,9 @@ class _DriverDocumentModalViewerState extends State<_DriverDocumentModalViewer> 
                       child: Container(
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
-                          color: AdminTheme.surfaceBlack,
+                          color: AdminTheme.warmCream,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AdminTheme.borderBlack),
+                          border: Border.all(color: AdminTheme.borderSubtle),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -814,7 +814,7 @@ class _DriverDocumentModalViewerState extends State<_DriverDocumentModalViewer> 
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AdminTheme.crispWhite)),
+                Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AdminTheme.deepBlack)),
                 Text(subtitle, style: const TextStyle(fontSize: 10.5, color: AdminTheme.textMuted)),
               ],
             ),

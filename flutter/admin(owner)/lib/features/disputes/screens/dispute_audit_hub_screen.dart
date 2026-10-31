@@ -110,13 +110,13 @@ class _DisputeAuditHubScreenState extends State<DisputeAuditHubScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AdminTheme.sidebarBlack,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: AdminTheme.borderBlack)),
+        backgroundColor: AdminTheme.crispWhite,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: AdminTheme.borderSubtle)),
         title: Row(
           children: [
             const Icon(Icons.currency_rupee, color: AdminTheme.statusOnline, size: 22),
             const SizedBox(width: 8),
-            Text('Issue Refund: #${dispute.orderCode}', style: const TextStyle(color: AdminTheme.crispWhite, fontSize: 16, fontWeight: FontWeight.w900)),
+            Text('Issue Refund: #${dispute.orderCode}', style: const TextStyle(color: AdminTheme.deepBlack, fontSize: 16, fontWeight: FontWeight.w900)),
           ],
         ),
         content: SizedBox(
@@ -125,20 +125,20 @@ class _DisputeAuditHubScreenState extends State<DisputeAuditHubScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Client: ${dispute.customerName} • ${dispute.customerPhone}', style: const TextStyle(color: AdminTheme.textLight, fontSize: 12)),
+              Text('Client: ${dispute.customerName} • ${dispute.customerPhone}', style: const TextStyle(color: AdminTheme.textDark, fontSize: 12)),
               const SizedBox(height: 14),
               const Text('REFUND AMOUNT (INR)', style: TextStyle(color: AdminTheme.textMuted, fontSize: 10, fontWeight: FontWeight.w800)),
               const SizedBox(height: 6),
               TextField(
                 controller: amountController,
                 keyboardType: TextInputType.number,
-                style: const TextStyle(color: AdminTheme.crispWhite, fontWeight: FontWeight.w900, fontSize: 16),
+                style: const TextStyle(color: AdminTheme.deepBlack, fontWeight: FontWeight.w900, fontSize: 16),
                 decoration: InputDecoration(
                   prefixText: '₹ ',
                   prefixStyle: const TextStyle(color: AdminTheme.crimsonRed, fontWeight: FontWeight.w900),
                   filled: true,
-                  fillColor: AdminTheme.surfaceBlack,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderBlack)),
+                  fillColor: AdminTheme.warmCream,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderSubtle)),
                 ),
               ),
               const SizedBox(height: 12),
@@ -147,11 +147,11 @@ class _DisputeAuditHubScreenState extends State<DisputeAuditHubScreen> {
               TextField(
                 controller: notesController,
                 maxLines: 2,
-                style: const TextStyle(color: AdminTheme.crispWhite, fontSize: 12),
+                style: const TextStyle(color: AdminTheme.deepBlack, fontSize: 12),
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: AdminTheme.surfaceBlack,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderBlack)),
+                  fillColor: AdminTheme.warmCream,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderSubtle)),
                 ),
               ),
             ],

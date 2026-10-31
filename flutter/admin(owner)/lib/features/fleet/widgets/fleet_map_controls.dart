@@ -38,14 +38,14 @@ class FleetMapControls extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: AdminTheme.sidebarBlack.withAlpha(240),
+            color: AdminTheme.crispWhite,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: isSocketConnected ? AdminTheme.statusOnline.withAlpha(120) : AdminTheme.crimsonRed.withAlpha(120),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withAlpha(80),
+                color: Colors.black.withAlpha(20),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -86,12 +86,12 @@ class FleetMapControls extends StatelessWidget {
         // Action Overlay Buttons (Geofences & Routes)
         Container(
           decoration: BoxDecoration(
-            color: AdminTheme.sidebarBlack.withAlpha(240),
+            color: AdminTheme.crispWhite,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AdminTheme.borderBlack),
+            border: Border.all(color: AdminTheme.borderSubtle),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withAlpha(80),
+                color: Colors.black.withAlpha(20),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -108,7 +108,7 @@ class FleetMapControls extends StatelessWidget {
                 onTap: onToggleGeofences,
                 activeColor: const Color(0xFFF59E0B),
               ),
-              const Divider(color: AdminTheme.borderBlack, height: 1),
+              const Divider(color: AdminTheme.borderSubtle, height: 1),
 
               // All Routes Toggle
               _buildControlButton(
@@ -119,7 +119,7 @@ class FleetMapControls extends StatelessWidget {
                 onTap: onToggleAllRoutes,
                 activeColor: AdminTheme.crimsonRed,
               ),
-              const Divider(color: AdminTheme.borderBlack, height: 1),
+              const Divider(color: AdminTheme.borderSubtle, height: 1),
 
               // Map Dark/Street Style Toggle
               _buildControlButton(
@@ -138,12 +138,12 @@ class FleetMapControls extends StatelessWidget {
         // Zoom & Pan Centroid Stack
         Container(
           decoration: BoxDecoration(
-            color: AdminTheme.sidebarBlack.withAlpha(240),
+            color: AdminTheme.crispWhite,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AdminTheme.borderBlack),
+            border: Border.all(color: AdminTheme.borderSubtle),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withAlpha(80),
+                color: Colors.black.withAlpha(20),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -152,23 +152,23 @@ class FleetMapControls extends StatelessWidget {
           child: Column(
             children: [
               IconButton(
-                icon: const Icon(Icons.add, size: 18, color: AdminTheme.crispWhite),
+                icon: const Icon(Icons.add, size: 18, color: AdminTheme.deepBlack),
                 onPressed: onZoomIn,
                 tooltip: 'Zoom In',
                 padding: const EdgeInsets.all(10),
                 constraints: const BoxConstraints(),
               ),
-              const Divider(color: AdminTheme.borderBlack, height: 1),
+              const Divider(color: AdminTheme.borderSubtle, height: 1),
               IconButton(
-                icon: const Icon(Icons.remove, size: 18, color: AdminTheme.crispWhite),
+                icon: const Icon(Icons.remove, size: 18, color: AdminTheme.deepBlack),
                 onPressed: onZoomOut,
                 tooltip: 'Zoom Out',
                 padding: const EdgeInsets.all(10),
                 constraints: const BoxConstraints(),
               ),
-              const Divider(color: AdminTheme.borderBlack, height: 1),
+              const Divider(color: AdminTheme.borderSubtle, height: 1),
               IconButton(
-                icon: const Icon(Icons.center_focus_strong, size: 18, color: AdminTheme.crimsonLight),
+                icon: const Icon(Icons.center_focus_strong, size: 18, color: AdminTheme.crimsonRed),
                 onPressed: onResetCentroid,
                 tooltip: 'Center Fleet Hub',
                 padding: const EdgeInsets.all(10),

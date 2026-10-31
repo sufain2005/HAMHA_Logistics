@@ -444,10 +444,10 @@ class _DispatchMatrixScreenState extends State<DispatchMatrixScreen> {
     return Container(
       width: 420,
       decoration: BoxDecoration(
-        color: AdminTheme.sidebarBlack,
-        border: const Border(left: BorderSide(color: AdminTheme.borderBlack, width: 1.5)),
+        color: AdminTheme.crispWhite,
+        border: const Border(left: BorderSide(color: AdminTheme.borderSubtle, width: 1.5)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withAlpha(160), blurRadius: 28, offset: const Offset(-5, 0)),
+          BoxShadow(color: Colors.black.withAlpha(25), blurRadius: 28, offset: const Offset(-5, 0)),
         ],
       ),
       child: Column(
@@ -457,7 +457,7 @@ class _DispatchMatrixScreenState extends State<DispatchMatrixScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
             decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: AdminTheme.borderBlack)),
+              border: Border(bottom: BorderSide(color: AdminTheme.borderSubtle)),
             ),
             child: Row(
               children: [
@@ -466,7 +466,7 @@ class _DispatchMatrixScreenState extends State<DispatchMatrixScreen> {
                 Expanded(
                   child: Text(
                     'Consignment #${order.orderCode}',
-                    style: const TextStyle(color: AdminTheme.crispWhite, fontSize: 16, fontWeight: FontWeight.w900),
+                    style: const TextStyle(color: AdminTheme.deepBlack, fontSize: 16, fontWeight: FontWeight.w900),
                   ),
                 ),
                 IconButton(
@@ -524,9 +524,9 @@ class _DispatchMatrixScreenState extends State<DispatchMatrixScreen> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: AdminTheme.surfaceBlack,
+                        color: AdminTheme.warmCream,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AdminTheme.borderBlack),
+                        border: Border.all(color: AdminTheme.borderSubtle),
                       ),
                       child: Row(
                         children: [
@@ -535,7 +535,7 @@ class _DispatchMatrixScreenState extends State<DispatchMatrixScreen> {
                           const Expanded(
                             child: Text(
                               'Consignment unassigned. Ready for PostGIS proximity dispatch.',
-                              style: TextStyle(color: AdminTheme.textLight, fontSize: 11),
+                              style: TextStyle(color: AdminTheme.textDark, fontSize: 11),
                             ),
                           ),
                           ElevatedButton(
@@ -594,7 +594,7 @@ class _DispatchMatrixScreenState extends State<DispatchMatrixScreen> {
         children: [
           Text(label, style: const TextStyle(fontSize: 10.5, color: AdminTheme.textMuted, fontWeight: FontWeight.w600)),
           const SizedBox(height: 1),
-          Text(value, style: const TextStyle(fontSize: 12.5, color: AdminTheme.crispWhite, fontWeight: FontWeight.w800)),
+          Text(value, style: const TextStyle(fontSize: 12.5, color: AdminTheme.deepBlack, fontWeight: FontWeight.w800)),
         ],
       ),
     );
@@ -654,11 +654,11 @@ class _PostGisRadiusDispatchModalState extends State<_PostGisRadiusDispatchModal
         width: 640,
         margin: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: AdminTheme.sidebarBlack,
+          color: AdminTheme.crispWhite,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AdminTheme.borderBlack, width: 1.5),
+          border: Border.all(color: AdminTheme.borderSubtle, width: 1.5),
           boxShadow: [
-            BoxShadow(color: Colors.black.withAlpha(180), blurRadius: 36, offset: const Offset(0, 12)),
+            BoxShadow(color: Colors.black.withAlpha(35), blurRadius: 36, offset: const Offset(0, 12)),
           ],
         ),
         child: Material(
@@ -671,7 +671,7 @@ class _PostGisRadiusDispatchModalState extends State<_PostGisRadiusDispatchModal
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
                 decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: AdminTheme.borderBlack)),
+                  border: Border(bottom: BorderSide(color: AdminTheme.borderSubtle)),
                 ),
                 child: Row(
                   children: [
@@ -683,7 +683,7 @@ class _PostGisRadiusDispatchModalState extends State<_PostGisRadiusDispatchModal
                         children: [
                           Text(
                             'PostGIS Proximity Dispatch Matrix',
-                            style: const TextStyle(color: AdminTheme.crispWhite, fontSize: 16, fontWeight: FontWeight.w900),
+                            style: const TextStyle(color: AdminTheme.deepBlack, fontSize: 16, fontWeight: FontWeight.w900),
                           ),
                           Text(
                             'Target Consignment #${order.orderCode} • Pickup: ${order.pickupAddress}',
@@ -705,7 +705,7 @@ class _PostGisRadiusDispatchModalState extends State<_PostGisRadiusDispatchModal
               // Radius Selector Strip
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                color: AdminTheme.surfaceBlack,
+                color: AdminTheme.warmCream,
                 child: Row(
                   children: [
                     const Text(
@@ -726,16 +726,16 @@ class _PostGisRadiusDispatchModalState extends State<_PostGisRadiusDispatchModal
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                             decoration: BoxDecoration(
-                              color: isSel ? AdminTheme.crimsonRed : AdminTheme.sidebarBlack,
+                              color: isSel ? AdminTheme.crimsonRed : AdminTheme.crispWhite,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: isSel ? AdminTheme.crimsonRed : AdminTheme.borderBlack),
+                              border: Border.all(color: isSel ? AdminTheme.crimsonRed : AdminTheme.borderSubtle),
                             ),
                             child: Text(
                               '${r.toInt()} km',
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w900,
-                                color: isSel ? AdminTheme.crispWhite : AdminTheme.textMuted,
+                                color: isSel ? AdminTheme.crispWhite : AdminTheme.textDark,
                               ),
                             ),
                           ),
@@ -784,9 +784,9 @@ class _PostGisRadiusDispatchModalState extends State<_PostGisRadiusDispatchModal
                               return Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: AdminTheme.surfaceBlack,
+                                  color: AdminTheme.warmCream,
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: AdminTheme.borderBlack),
+                                  border: Border.all(color: AdminTheme.borderSubtle),
                                 ),
                                 child: Row(
                                   children: [
@@ -798,7 +798,7 @@ class _PostGisRadiusDispatchModalState extends State<_PostGisRadiusDispatchModal
                                         children: [
                                           Text(
                                             driver.name,
-                                            style: const TextStyle(color: AdminTheme.crispWhite, fontSize: 13, fontWeight: FontWeight.w900),
+                                            style: const TextStyle(color: AdminTheme.deepBlack, fontSize: 13, fontWeight: FontWeight.w900),
                                           ),
                                           Text(
                                             '${driver.vehicleModel} (${driver.plateNumber}) • ${driver.district}',
@@ -845,7 +845,7 @@ class _PostGisRadiusDispatchModalState extends State<_PostGisRadiusDispatchModal
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: const BoxDecoration(
-                  border: Border(top: BorderSide(color: AdminTheme.borderBlack)),
+                  border: Border(top: BorderSide(color: AdminTheme.borderSubtle)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,

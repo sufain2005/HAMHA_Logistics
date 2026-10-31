@@ -59,7 +59,7 @@ class FleetDriverMarkerWidget extends StatelessWidget {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: isSelected ? AdminTheme.deepBlack : AdminTheme.surfaceBlack,
+              color: isSelected ? AdminTheme.deepBlack : AdminTheme.crispWhite,
               shape: BoxShape.circle,
               border: Border.all(
                 color: isSelected ? AdminTheme.crimsonRed : statusColor,
@@ -91,7 +91,7 @@ class FleetDriverMarkerWidget extends StatelessWidget {
               decoration: BoxDecoration(
                 color: statusColor,
                 shape: BoxShape.circle,
-                border: Border.all(color: AdminTheme.deepBlack, width: 1.8),
+                border: Border.all(color: AdminTheme.crispWhite, width: 1.8),
               ),
             ),
           ),
@@ -105,7 +105,7 @@ class FleetDriverMarkerWidget extends StatelessWidget {
                 color: AdminTheme.deepBlack.withAlpha(230),
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
-                  color: isSelected ? AdminTheme.crimsonRed : AdminTheme.borderBlack,
+                  color: isSelected ? AdminTheme.crimsonRed : AdminTheme.borderSubtle,
                   width: 1,
                 ),
               ),

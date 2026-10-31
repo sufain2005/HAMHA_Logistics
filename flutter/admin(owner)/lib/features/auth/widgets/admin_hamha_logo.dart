@@ -11,32 +11,24 @@ class AdminHamhaLogo extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Image.asset(
-          'assets/images/hamha_logo_dark.png',
+          'assets/images/hamha_logo.png',
           height: size,
           fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Image.asset(
-              'assets/images/hamha_logo.jpg',
-              height: size * 0.8,
-              fit: BoxFit.contain,
-            ),
+          errorBuilder: (_, __, ___) => Image.asset(
+            'assets/images/hamha_logo.jpg',
+            height: size * 0.8,
+            fit: BoxFit.contain,
           ),
         ),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
           decoration: BoxDecoration(
-            color: AdminTheme.surfaceBlack,
+            color: AdminTheme.deepBlack,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AdminTheme.borderBlack, width: 1.2),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withAlpha(40),
+                color: Colors.black.withAlpha(25),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),

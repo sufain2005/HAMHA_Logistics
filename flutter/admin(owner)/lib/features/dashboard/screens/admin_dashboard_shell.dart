@@ -757,29 +757,29 @@ class _AdminDashboardShellState extends State<AdminDashboardShell> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AdminTheme.sidebarBlack,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: AdminTheme.borderBlack)),
+        backgroundColor: AdminTheme.crispWhite,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: AdminTheme.borderSubtle)),
         title: Row(
           children: [
             const Icon(Icons.send_rounded, color: AdminTheme.crimsonRed, size: 20),
             const SizedBox(width: 8),
-            Text('Manual Dispatch: ${driver.name}', style: const TextStyle(color: AdminTheme.crispWhite, fontSize: 16, fontWeight: FontWeight.w900)),
+            Text('Manual Dispatch: ${driver.name}', style: const TextStyle(color: AdminTheme.deepBlack, fontSize: 16, fontWeight: FontWeight.w900)),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Vehicle: ${driver.vehicleModel} • ${driver.plateNumber}', style: const TextStyle(color: AdminTheme.textLight, fontSize: 13, fontWeight: FontWeight.w700)),
+            Text('Vehicle: ${driver.vehicleModel} • ${driver.plateNumber}', style: const TextStyle(color: AdminTheme.textDark, fontSize: 13, fontWeight: FontWeight.w700)),
             const SizedBox(height: 6),
             Text('Location: ${driver.district} (${driver.location.latitude.toStringAsFixed(4)}, ${driver.location.longitude.toStringAsFixed(4)})', style: const TextStyle(color: AdminTheme.textMuted, fontSize: 11)),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: AdminTheme.surfaceBlack, borderRadius: BorderRadius.circular(10), border: Border.all(color: AdminTheme.borderBlack)),
+              decoration: BoxDecoration(color: AdminTheme.warmCream, borderRadius: BorderRadius.circular(10), border: Border.all(color: AdminTheme.borderSubtle)),
               child: const Text(
                 'Full PostGIS ST_DWithin radius matrix and shipment queue will be managed in Phase 3 Dispatch Matrix.',
-                style: TextStyle(color: AdminTheme.textLight, fontSize: 11, height: 1.4),
+                style: TextStyle(color: AdminTheme.textDark, fontSize: 11, height: 1.4),
               ),
             ),
           ],
@@ -792,14 +792,15 @@ class _AdminDashboardShellState extends State<AdminDashboardShell> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AdminTheme.crimsonRed,
+              foregroundColor: AdminTheme.crispWhite,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () {
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Dispatched high-priority override packet to ${driver.name} via Socket.io.'),
-                  backgroundColor: AdminTheme.surfaceBlack,
+                  content: Text('Dispatched high-priority override packet to ${driver.name} via Socket.io.', style: const TextStyle(color: AdminTheme.crispWhite)),
+                  backgroundColor: AdminTheme.deepBlack,
                 ),
               );
             },

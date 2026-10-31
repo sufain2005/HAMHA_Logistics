@@ -29,12 +29,12 @@ class FloatingTelemetryCard extends StatelessWidget {
       child: Container(
         width: 360,
         decoration: BoxDecoration(
-          color: AdminTheme.sidebarBlack,
+          color: AdminTheme.crispWhite,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AdminTheme.borderBlack, width: 1.5),
+          border: Border.all(color: AdminTheme.borderSubtle, width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withAlpha(160),
+              color: Colors.black.withAlpha(25),
               blurRadius: 28,
               offset: const Offset(0, 10),
             ),
@@ -48,7 +48,7 @@ class FloatingTelemetryCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: AdminTheme.borderBlack)),
+                border: Border(bottom: BorderSide(color: AdminTheme.borderSubtle)),
               ),
               child: Row(
                 children: [
@@ -74,7 +74,7 @@ class FloatingTelemetryCard extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w900,
-                            color: AdminTheme.crispWhite,
+                            color: AdminTheme.deepBlack,
                           ),
                         ),
                         Text(
@@ -144,7 +144,7 @@ class FloatingTelemetryCard extends StatelessWidget {
                       Expanded(
                         child: _buildMetricTile(
                           icon: driver.vehicleIcon,
-                          iconColor: AdminTheme.crispWhite,
+                          iconColor: AdminTheme.deepBlack,
                           label: driver.vehicleType.toUpperCase(),
                           value: driver.plateNumber,
                         ),
@@ -158,7 +158,7 @@ class FloatingTelemetryCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: AdminTheme.surfaceBlack,
+                        color: AdminTheme.warmCream,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: AdminTheme.crimsonRed.withAlpha(60)),
                       ),
@@ -180,7 +180,7 @@ class FloatingTelemetryCard extends StatelessWidget {
                                         style: const TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w900,
-                                          color: AdminTheme.crimsonLight,
+                                          color: AdminTheme.crimsonDark,
                                           letterSpacing: 0.5,
                                         ),
                                       ),
@@ -209,7 +209,7 @@ class FloatingTelemetryCard extends StatelessWidget {
                             const SizedBox(height: 4),
                             Text(
                               driver.currentCargo!,
-                              style: const TextStyle(fontSize: 11, color: AdminTheme.textLight, fontWeight: FontWeight.w600),
+                              style: const TextStyle(fontSize: 11, color: AdminTheme.textDark, fontWeight: FontWeight.w600),
                             ),
                           ],
                           if (driver.pickupAddress != null && driver.dropoffAddress != null) ...[
@@ -261,8 +261,8 @@ class FloatingTelemetryCard extends StatelessWidget {
                         child: OutlinedButton.icon(
                           onPressed: onCenterMap,
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: AdminTheme.crispWhite,
-                            side: const BorderSide(color: AdminTheme.borderBlack),
+                            foregroundColor: AdminTheme.deepBlack,
+                            side: const BorderSide(color: AdminTheme.borderSubtle),
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -278,12 +278,12 @@ class FloatingTelemetryCard extends StatelessWidget {
                           child: ElevatedButton.icon(
                             onPressed: onToggleRoute,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: isRouteVisible ? AdminTheme.crimsonRed : AdminTheme.surfaceBlack,
-                              foregroundColor: AdminTheme.crispWhite,
+                              backgroundColor: isRouteVisible ? AdminTheme.crimsonRed : AdminTheme.warmCream,
+                              foregroundColor: isRouteVisible ? AdminTheme.crispWhite : AdminTheme.deepBlack,
                               padding: const EdgeInsets.symmetric(vertical: 10),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                side: BorderSide(color: isRouteVisible ? AdminTheme.crimsonRed : AdminTheme.borderBlack),
+                                side: BorderSide(color: isRouteVisible ? AdminTheme.crimsonRed : AdminTheme.borderSubtle),
                               ),
                             ),
                             icon: Icon(isRouteVisible ? Icons.alt_route : Icons.route, size: 14),
@@ -330,9 +330,9 @@ class FloatingTelemetryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: AdminTheme.surfaceBlack,
+        color: AdminTheme.warmCream,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AdminTheme.borderBlack),
+        border: Border.all(color: AdminTheme.borderSubtle),
       ),
       child: Row(
         children: [
@@ -359,7 +359,7 @@ class FloatingTelemetryCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
-                    color: AdminTheme.crispWhite,
+                    color: AdminTheme.deepBlack,
                   ),
                 ),
               ],

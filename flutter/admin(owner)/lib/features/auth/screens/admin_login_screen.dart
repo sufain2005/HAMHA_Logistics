@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/admin_theme.dart';
-import '../../../core/auth/admin_rbac.dart';
 import '../../../core/services/admin_auth_service.dart';
 import '../widgets/admin_hamha_logo.dart';
 import '../../dashboard/screens/admin_dashboard_shell.dart';
@@ -247,7 +246,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AdminTheme.deepBlack,
+      backgroundColor: AdminTheme.warmCream,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
@@ -294,12 +293,12 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       key: const ValueKey('login_card'),
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: AdminTheme.surfaceBlack,
+        color: AdminTheme.crispWhite,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AdminTheme.borderBlack, width: 1.5),
+        border: Border.all(color: AdminTheme.borderSubtle, width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(120),
+            color: Colors.black.withAlpha(20),
             blurRadius: 30,
             offset: const Offset(0, 10),
           ),
@@ -319,7 +318,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
-                      color: AdminTheme.crispWhite,
+                      color: AdminTheme.deepBlack,
                       letterSpacing: 0.4,
                     ),
                   ),
@@ -336,16 +335,16 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: AdminTheme.crimsonRed.withAlpha(25),
+                  color: AdminTheme.crimsonTint,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AdminTheme.crimsonRed.withAlpha(80)),
+                  border: Border.all(color: AdminTheme.crimsonLight.withAlpha(120)),
                 ),
                 child: const Text(
                   'OWNER PORTAL',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
-                    color: AdminTheme.crimsonLight,
+                    color: AdminTheme.crimsonRed,
                     letterSpacing: 0.8,
                   ),
                 ),
@@ -359,18 +358,18 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AdminTheme.crimsonRed.withAlpha(30),
+                color: AdminTheme.crimsonTint,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AdminTheme.crimsonRed.withAlpha(120)),
+                border: Border.all(color: AdminTheme.crimsonLight),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline, color: AdminTheme.crimsonLight, size: 18),
+                  const Icon(Icons.error_outline, color: AdminTheme.crimsonRed, size: 18),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       _errorMessage!,
-                      style: const TextStyle(color: AdminTheme.crimsonLight, fontSize: 12, fontWeight: FontWeight.w600),
+                      style: const TextStyle(color: AdminTheme.crimsonDark, fontSize: 12, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -382,22 +381,23 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
           // 1. Owner Email
           const Text(
             'OWNER EMAIL ADDRESS',
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AdminTheme.textMuted, letterSpacing: 0.8),
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AdminTheme.textDark, letterSpacing: 0.8),
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _loginEmailController,
-            style: const TextStyle(color: AdminTheme.crispWhite, fontSize: 14, fontWeight: FontWeight.w600),
+            style: const TextStyle(color: AdminTheme.textDark, fontSize: 14, fontWeight: FontWeight.w600),
             decoration: InputDecoration(
               hintText: 'Enter registered email (e.g. owner@hamha.com)',
               hintStyle: const TextStyle(color: AdminTheme.textMuted, fontSize: 13),
               prefixIcon: const Icon(Icons.alternate_email, color: AdminTheme.textMuted, size: 18),
               filled: true,
-              fillColor: AdminTheme.canvasBg,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              fillColor: AdminTheme.warmCream,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AdminTheme.borderSubtle, width: 1.2)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AdminTheme.borderSubtle, width: 1.2)),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AdminTheme.crimsonRed, width: 1.5),
+                borderSide: const BorderSide(color: AdminTheme.crimsonRed, width: 1.8),
               ),
             ),
           ),
@@ -406,13 +406,13 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
           // 2. Password
           const Text(
             'PASSWORD',
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AdminTheme.textMuted, letterSpacing: 0.8),
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AdminTheme.textDark, letterSpacing: 0.8),
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _loginPasswordController,
             obscureText: _obscureLoginPassword,
-            style: const TextStyle(color: AdminTheme.crispWhite, fontSize: 14, fontWeight: FontWeight.w600),
+            style: const TextStyle(color: AdminTheme.textDark, fontSize: 14, fontWeight: FontWeight.w600),
             decoration: InputDecoration(
               hintText: 'Enter password',
               hintStyle: const TextStyle(color: AdminTheme.textMuted, fontSize: 13),
@@ -426,11 +426,12 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                 onPressed: () => setState(() => _obscureLoginPassword = !_obscureLoginPassword),
               ),
               filled: true,
-              fillColor: AdminTheme.canvasBg,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              fillColor: AdminTheme.warmCream,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AdminTheme.borderSubtle, width: 1.2)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AdminTheme.borderSubtle, width: 1.2)),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AdminTheme.crimsonRed, width: 1.5),
+                borderSide: const BorderSide(color: AdminTheme.crimsonRed, width: 1.8),
               ),
             ),
           ),
@@ -442,20 +443,20 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             children: [
               const Text(
                 'TWO-FACTOR OTP VERIFICATION',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AdminTheme.textMuted, letterSpacing: 0.8),
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AdminTheme.textDark, letterSpacing: 0.8),
               ),
               InkWell(
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('OTP sent to your registered mobile number: 889900'),
-                      backgroundColor: AdminTheme.surfaceBlack,
+                      backgroundColor: AdminTheme.deepBlack,
                     ),
                   );
                 },
                 child: const Text(
                   'Resend OTP',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AdminTheme.crimsonLight),
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AdminTheme.crimsonRed),
                 ),
               ),
             ],
@@ -466,7 +467,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             keyboardType: TextInputType.number,
             maxLength: 6,
             style: const TextStyle(
-              color: AdminTheme.crispWhite,
+              color: AdminTheme.deepBlack,
               fontSize: 18,
               letterSpacing: 6.0,
               fontWeight: FontWeight.w900,
@@ -477,11 +478,12 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               hintStyle: TextStyle(color: AdminTheme.textMuted.withAlpha(90), fontSize: 18, letterSpacing: 6.0),
               prefixIcon: const Icon(Icons.pin, color: AdminTheme.textMuted, size: 20),
               filled: true,
-              fillColor: AdminTheme.canvasBg,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              fillColor: AdminTheme.warmCream,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AdminTheme.borderSubtle, width: 1.2)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AdminTheme.borderSubtle, width: 1.2)),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AdminTheme.crimsonRed, width: 1.5),
+                borderSide: const BorderSide(color: AdminTheme.crimsonRed, width: 1.8),
               ),
             ),
           ),
@@ -495,7 +497,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               foregroundColor: AdminTheme.crispWhite,
               minimumSize: const Size.fromHeight(52),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              elevation: 4,
+              elevation: 3,
             ),
             child: _isLoading
                 ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
@@ -516,7 +518,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
           // Divider with "Have you registered as Owner?"
           Row(
             children: [
-              Expanded(child: Divider(color: AdminTheme.borderBlack, thickness: 1)),
+              const Expanded(child: Divider(color: AdminTheme.borderSubtle, thickness: 1)),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 child: Text(
@@ -524,7 +526,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                   style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AdminTheme.textMuted.withAlpha(180)),
                 ),
               ),
-              Expanded(child: Divider(color: AdminTheme.borderBlack, thickness: 1)),
+              const Expanded(child: Divider(color: AdminTheme.borderSubtle, thickness: 1)),
             ],
           ),
           const SizedBox(height: 18),
@@ -538,11 +540,11 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               });
             },
             style: OutlinedButton.styleFrom(
-              foregroundColor: AdminTheme.crispWhite,
+              foregroundColor: AdminTheme.crimsonRed,
               side: const BorderSide(color: AdminTheme.crimsonRed, width: 1.5),
               minimumSize: const Size.fromHeight(50),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              backgroundColor: AdminTheme.crimsonRed.withAlpha(15),
+              backgroundColor: AdminTheme.crimsonTint,
             ),
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -569,12 +571,12 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       key: const ValueKey('reg_card'),
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: AdminTheme.surfaceBlack,
+        color: AdminTheme.crispWhite,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AdminTheme.borderBlack, width: 1.5),
+        border: Border.all(color: AdminTheme.borderSubtle, width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(140),
+            color: Colors.black.withAlpha(20),
             blurRadius: 30,
             offset: const Offset(0, 10),
           ),
@@ -595,7 +597,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
-                      color: AdminTheme.crispWhite,
+                      color: AdminTheme.deepBlack,
                       letterSpacing: 0.4,
                     ),
                   ),
@@ -609,8 +611,8 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               OutlinedButton.icon(
                 onPressed: () => setState(() => _isRegistering = false),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AdminTheme.textMuted,
-                  side: BorderSide(color: AdminTheme.borderBlack),
+                  foregroundColor: AdminTheme.deepBlack,
+                  side: const BorderSide(color: AdminTheme.borderSubtle),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
@@ -626,18 +628,18 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AdminTheme.crimsonRed.withAlpha(30),
+                color: AdminTheme.crimsonTint,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AdminTheme.crimsonRed.withAlpha(120)),
+                border: Border.all(color: AdminTheme.crimsonLight),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline, color: AdminTheme.crimsonLight, size: 18),
+                  const Icon(Icons.error_outline, color: AdminTheme.crimsonRed, size: 18),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       _errorMessage!,
-                      style: const TextStyle(color: AdminTheme.crimsonLight, fontSize: 12, fontWeight: FontWeight.w600),
+                      style: const TextStyle(color: AdminTheme.crimsonDark, fontSize: 12, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -679,16 +681,16 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
-                        color: AdminTheme.canvasBg,
+                        color: AdminTheme.warmCream,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AdminTheme.borderBlack),
+                        border: Border.all(color: AdminTheme.borderSubtle),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: _selectedGovtIdType,
-                          dropdownColor: AdminTheme.surfaceBlack,
+                          dropdownColor: AdminTheme.crispWhite,
                           isExpanded: true,
-                          style: const TextStyle(color: AdminTheme.crispWhite, fontSize: 13, fontWeight: FontWeight.w700),
+                          style: const TextStyle(color: AdminTheme.deepBlack, fontSize: 13, fontWeight: FontWeight.w700),
                           items: ['Aadhaar Card', 'PAN Card', 'Voter ID', 'Driving License']
                               .map((type) => DropdownMenuItem(value: type, child: Text(type)))
                               .toList(),
@@ -774,13 +776,13 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                   children: [
                     const Text(
                       'ACCOUNT PASSWORD',
-                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: AdminTheme.textMuted, letterSpacing: 0.8),
+                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: AdminTheme.textDark, letterSpacing: 0.8),
                     ),
                     const SizedBox(height: 8),
                     TextField(
                       controller: _regPasswordController,
                       obscureText: _obscureRegPassword,
-                      style: const TextStyle(color: AdminTheme.crispWhite, fontSize: 13.5, fontWeight: FontWeight.w600),
+                      style: const TextStyle(color: AdminTheme.textDark, fontSize: 13.5, fontWeight: FontWeight.w600),
                       decoration: InputDecoration(
                         hintText: 'Create strong master password',
                         hintStyle: const TextStyle(color: AdminTheme.textMuted, fontSize: 12.5),
@@ -790,11 +792,12 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                           onPressed: () => setState(() => _obscureRegPassword = !_obscureRegPassword),
                         ),
                         filled: true,
-                        fillColor: AdminTheme.canvasBg,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        fillColor: AdminTheme.warmCream,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AdminTheme.borderSubtle, width: 1.2)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AdminTheme.borderSubtle, width: 1.2)),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AdminTheme.crimsonRed, width: 1.5),
+                          borderSide: const BorderSide(color: AdminTheme.crimsonRed, width: 1.8),
                         ),
                       ),
                     ),
@@ -843,9 +846,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AdminTheme.canvasBg,
+              color: AdminTheme.warmCream,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AdminTheme.borderBlack),
+              border: Border.all(color: AdminTheme.borderSubtle),
             ),
             child: Row(
               children: [
@@ -855,22 +858,24 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                     children: [
                       const Text(
                         'ENTER 6-DIGIT OTP SENT TO YOUR MOBILE',
-                        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: AdminTheme.textMuted, letterSpacing: 0.8),
+                        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: AdminTheme.textDark, letterSpacing: 0.8),
                       ),
                       const SizedBox(height: 6),
                       TextField(
                         controller: _regOtpController,
                         keyboardType: TextInputType.number,
                         maxLength: 6,
-                        style: const TextStyle(color: AdminTheme.crispWhite, fontSize: 16, letterSpacing: 4.0, fontWeight: FontWeight.w900),
+                        style: const TextStyle(color: AdminTheme.deepBlack, fontSize: 16, letterSpacing: 4.0, fontWeight: FontWeight.w900),
                         decoration: InputDecoration(
                           counterText: '',
                           hintText: '889900',
                           hintStyle: TextStyle(color: AdminTheme.textMuted.withAlpha(90), fontSize: 16, letterSpacing: 4.0),
                           prefixIcon: const Icon(Icons.security, color: AdminTheme.textMuted, size: 18),
                           filled: true,
-                          fillColor: AdminTheme.surfaceBlack,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                          fillColor: AdminTheme.crispWhite,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderSubtle, width: 1.2)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderSubtle, width: 1.2)),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.crimsonRed, width: 1.8)),
                         ),
                       ),
                     ],
@@ -882,14 +887,14 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Verification OTP code sent to ${_regMobileController.text.isEmpty ? "your mobile" : _regMobileController.text}: 889900'),
-                        backgroundColor: AdminTheme.surfaceBlack,
+                        backgroundColor: AdminTheme.deepBlack,
                       ),
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AdminTheme.surfaceBlack,
-                    foregroundColor: AdminTheme.crimsonLight,
-                    side: const BorderSide(color: AdminTheme.crimsonRed),
+                    backgroundColor: AdminTheme.crimsonTint,
+                    foregroundColor: AdminTheme.crimsonRed,
+                    side: const BorderSide(color: AdminTheme.crimsonLight),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   ),
@@ -909,7 +914,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               foregroundColor: AdminTheme.crispWhite,
               minimumSize: const Size.fromHeight(54),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              elevation: 4,
+              elevation: 3,
             ),
             child: _isLoading
                 ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
@@ -949,9 +954,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AdminTheme.canvasBg,
+        color: AdminTheme.warmCream,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AdminTheme.borderBlack, width: 1.2),
+        border: Border.all(color: AdminTheme.borderSubtle, width: 1.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -961,7 +966,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             children: [
               Text(
                 'VEHICLE #${index + 1}',
-                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w900, color: AdminTheme.crimsonLight, letterSpacing: 0.8),
+                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w900, color: AdminTheme.crimsonRed, letterSpacing: 0.8),
               ),
               if (_vehicles.length > 1)
                 IconButton(
@@ -976,7 +981,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
           // Vehicle Type Selector (Bike, Mini Van, Van, Truck, Other)
           const Text(
             'SELECT VEHICLE CATEGORY',
-            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AdminTheme.textMuted, letterSpacing: 0.6),
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AdminTheme.textDark, letterSpacing: 0.6),
           ),
           const SizedBox(height: 8),
           SingleChildScrollView(
@@ -998,16 +1003,16 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AdminTheme.surfaceBlack,
+                color: AdminTheme.crispWhite,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AdminTheme.crimsonRed.withAlpha(80)),
+                border: Border.all(color: AdminTheme.crimsonRed.withAlpha(120)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'SPECIFY COMMERCIAL AXLE / TIRE CLASSIFICATION:',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AdminTheme.crimsonLight, letterSpacing: 0.6),
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AdminTheme.crimsonRed, letterSpacing: 0.6),
                   ),
                   const SizedBox(height: 8),
                   Wrap(
@@ -1016,10 +1021,10 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                     children: ['4 Tire', '6 Tire', '8 Tire', '10 Tire', '12 Tire', '14+ Tire Heavy Multi-Axle'].map((tire) {
                       final isSelected = v.tireConfig == tire;
                       return ChoiceChip(
-                        label: Text(tire, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: isSelected ? Colors.white : AdminTheme.textMuted)),
+                        label: Text(tire, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: isSelected ? Colors.white : AdminTheme.textDark)),
                         selected: isSelected,
                         selectedColor: AdminTheme.crimsonRed,
-                        backgroundColor: AdminTheme.canvasBg,
+                        backgroundColor: AdminTheme.warmCream,
                         onSelected: (sel) {
                           if (sel) setState(() => v.tireConfig = tire);
                         },
@@ -1042,21 +1047,23 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                   children: [
                     const Text(
                       'REGISTERED LICENSE PLATE NUMBER',
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AdminTheme.textMuted, letterSpacing: 0.6),
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AdminTheme.textDark, letterSpacing: 0.6),
                     ),
                     const SizedBox(height: 6),
                     TextFormField(
                       initialValue: v.plateNumber,
                       onChanged: (val) => v.plateNumber = val.toUpperCase(),
                       textCapitalization: TextCapitalization.characters,
-                      style: const TextStyle(color: AdminTheme.crispWhite, fontSize: 13, fontWeight: FontWeight.w700),
+                      style: const TextStyle(color: AdminTheme.deepBlack, fontSize: 13, fontWeight: FontWeight.w700),
                       decoration: InputDecoration(
                         hintText: 'e.g. MH-04-AB-1290',
                         hintStyle: const TextStyle(color: AdminTheme.textMuted, fontSize: 12),
                         filled: true,
-                        fillColor: AdminTheme.surfaceBlack,
+                        fillColor: AdminTheme.crispWhite,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderSubtle, width: 1.2)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderSubtle, width: 1.2)),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.crimsonRed, width: 1.8)),
                       ),
                     ),
                   ],
@@ -1070,20 +1077,22 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                   children: [
                     const Text(
                       'MAKE & MODEL',
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AdminTheme.textMuted, letterSpacing: 0.6),
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AdminTheme.textDark, letterSpacing: 0.6),
                     ),
                     const SizedBox(height: 6),
                     TextFormField(
                       initialValue: v.model,
                       onChanged: (val) => v.model = val,
-                      style: const TextStyle(color: AdminTheme.crispWhite, fontSize: 13, fontWeight: FontWeight.w700),
+                      style: const TextStyle(color: AdminTheme.deepBlack, fontSize: 13, fontWeight: FontWeight.w700),
                       decoration: InputDecoration(
                         hintText: 'e.g. Tata Ace Gold / Eicher Pro',
                         hintStyle: const TextStyle(color: AdminTheme.textMuted, fontSize: 12),
                         filled: true,
-                        fillColor: AdminTheme.surfaceBlack,
+                        fillColor: AdminTheme.crispWhite,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderSubtle, width: 1.2)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderSubtle, width: 1.2)),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.crimsonRed, width: 1.8)),
                       ),
                     ),
                   ],
@@ -1103,7 +1112,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('Vehicle RC / Registration photo attached for Vehicle #${index + 1}'),
-                  backgroundColor: AdminTheme.surfaceBlack,
+                  backgroundColor: AdminTheme.deepBlack,
                 ),
               );
             },
@@ -1111,9 +1120,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: v.isRcUploaded ? const Color(0xFF064E3B).withAlpha(120) : AdminTheme.surfaceBlack,
+                color: v.isRcUploaded ? const Color(0xFFECFDF5) : AdminTheme.crispWhite,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: v.isRcUploaded ? AdminTheme.statusOnline : AdminTheme.borderBlack),
+                border: Border.all(color: v.isRcUploaded ? AdminTheme.statusOnline : AdminTheme.borderSubtle),
               ),
               child: Row(
                 children: [
@@ -1132,7 +1141,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                           style: TextStyle(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w900,
-                            color: v.isRcUploaded ? AdminTheme.statusOnline : AdminTheme.crispWhite,
+                            color: v.isRcUploaded ? AdminTheme.statusOnline : AdminTheme.deepBlack,
                             letterSpacing: 0.5,
                           ),
                         ),
@@ -1146,12 +1155,12 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AdminTheme.canvasBg,
+                      color: v.isRcUploaded ? AdminTheme.statusOnline.withAlpha(20) : AdminTheme.warmCream,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       v.isRcUploaded ? 'ATTACHED' : 'ATTACH PIC',
-                      style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w800, color: AdminTheme.crispWhite),
+                      style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w800, color: v.isRcUploaded ? AdminTheme.statusOnline : AdminTheme.deepBlack),
                     ),
                   ),
                 ],
@@ -1174,21 +1183,21 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? AdminTheme.crimsonRed : AdminTheme.surfaceBlack,
+            color: isSelected ? AdminTheme.crimsonRed : AdminTheme.crispWhite,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: isSelected ? AdminTheme.crimsonRed : AdminTheme.borderBlack),
+            border: Border.all(color: isSelected ? AdminTheme.crimsonRed : AdminTheme.borderSubtle),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 14, color: isSelected ? Colors.white : AdminTheme.textMuted),
+              Icon(icon, size: 14, color: isSelected ? Colors.white : AdminTheme.textDark),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w800,
-                  color: isSelected ? Colors.white : AdminTheme.textMuted,
+                  color: isSelected ? Colors.white : AdminTheme.deepBlack,
                 ),
               ),
             ],
@@ -1208,7 +1217,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w900,
-            color: AdminTheme.crispWhite,
+            color: AdminTheme.deepBlack,
             letterSpacing: 0.8,
           ),
         ),
@@ -1229,24 +1238,25 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: AdminTheme.textMuted, letterSpacing: 0.8),
+          style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: AdminTheme.textDark, letterSpacing: 0.8),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           keyboardType: keyboardType,
           textCapitalization: textCapitalization,
-          style: const TextStyle(color: AdminTheme.crispWhite, fontSize: 13.5, fontWeight: FontWeight.w600),
+          style: const TextStyle(color: AdminTheme.deepBlack, fontSize: 13.5, fontWeight: FontWeight.w600),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: const TextStyle(color: AdminTheme.textMuted, fontSize: 12.5),
             prefixIcon: Icon(icon, color: AdminTheme.textMuted, size: 18),
             filled: true,
-            fillColor: AdminTheme.canvasBg,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            fillColor: AdminTheme.warmCream,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AdminTheme.borderSubtle, width: 1.2)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AdminTheme.borderSubtle, width: 1.2)),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AdminTheme.crimsonRed, width: 1.5),
+              borderSide: const BorderSide(color: AdminTheme.crimsonRed, width: 1.8),
             ),
           ),
         ),

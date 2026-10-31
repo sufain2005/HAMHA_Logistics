@@ -20,7 +20,10 @@ class AdminSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 260,
-      color: AdminTheme.sidebarBlack,
+      decoration: const BoxDecoration(
+        color: AdminTheme.crispWhite,
+        border: Border(right: BorderSide(color: AdminTheme.borderSubtle, width: 1.2)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -28,35 +31,27 @@ class AdminSidebar extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
             decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: AdminTheme.borderBlack)),
+              border: Border(bottom: BorderSide(color: AdminTheme.borderSubtle)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Image.asset(
-                  'assets/images/hamha_logo_dark.png',
+                  'assets/images/hamha_logo.png',
                   height: 38,
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Image.asset(
-                      'assets/images/hamha_logo.jpg',
-                      height: 28,
-                      fit: BoxFit.contain,
-                    ),
+                  errorBuilder: (_, __, ___) => Image.asset(
+                    'assets/images/hamha_logo.jpg',
+                    height: 28,
+                    fit: BoxFit.contain,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AdminTheme.surfaceBlack,
+                    color: AdminTheme.deepBlack,
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: AdminTheme.borderBlack),
                   ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
@@ -68,7 +63,7 @@ class AdminSidebar extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.w800,
-                          color: AdminTheme.crimsonRed,
+                          color: AdminTheme.crispWhite,
                           letterSpacing: 1.0,
                         ),
                       ),
@@ -84,15 +79,15 @@ class AdminSidebar extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             margin: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AdminTheme.surfaceBlack,
+              color: AdminTheme.warmCream,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AdminTheme.borderBlack),
+              border: Border.all(color: AdminTheme.borderSubtle),
             ),
             child: Row(
               children: [
                 CircleAvatar(
                   radius: 20,
-                  backgroundColor: admin.scopeColor.withAlpha(40),
+                  backgroundColor: admin.scopeColor.withAlpha(30),
                   child: Icon(Icons.security, color: admin.scopeColor, size: 20),
                 ),
                 const SizedBox(width: 12),
@@ -107,7 +102,7 @@ class AdminSidebar extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w900,
-                          color: AdminTheme.crispWhite,
+                          color: AdminTheme.deepBlack,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -199,7 +194,7 @@ class AdminSidebar extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: AdminTheme.borderBlack)),
+              border: Border(top: BorderSide(color: AdminTheme.borderSubtle)),
             ),
             child: InkWell(
               onTap: onLogout,
@@ -207,9 +202,9 @@ class AdminSidebar extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  color: AdminTheme.surfaceBlack,
+                  color: AdminTheme.warmCream,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AdminTheme.borderBlack),
+                  border: Border.all(color: AdminTheme.borderSubtle),
                 ),
                 child: const Row(
                   children: [
@@ -219,7 +214,7 @@ class AdminSidebar extends StatelessWidget {
                       child: Text(
                         'Lock Session & Exit',
                         style: TextStyle(
-                          color: AdminTheme.crispWhite,
+                          color: AdminTheme.deepBlack,
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
                         ),
@@ -264,10 +259,10 @@ class AdminSidebar extends StatelessWidget {
                   icon,
                   size: 20,
                   color: !hasPerm
-                      ? AdminTheme.borderBlack
+                      ? AdminTheme.borderGrey
                       : isSelected
                           ? AdminTheme.crispWhite
-                          : AdminTheme.textMuted,
+                          : AdminTheme.deepBlack,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -283,7 +278,7 @@ class AdminSidebar extends StatelessWidget {
                               ? AdminTheme.textMuted.withAlpha(100)
                               : isSelected
                                   ? AdminTheme.crispWhite
-                                  : AdminTheme.crispWhite.withAlpha(220),
+                                  : AdminTheme.deepBlack,
                         ),
                       ),
                       Text(
