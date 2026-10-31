@@ -159,6 +159,7 @@ class ApiClient {
     String? primaryAddress,
     String? upiId,
     bool? whatsappAlerts,
+    String? avatarUrl,
   }) async {
     final cleanName = name.trim();
     final cleanEmail = email.trim().toLowerCase();
@@ -178,6 +179,7 @@ class ApiClient {
       primaryAddress: primaryAddress ?? (currentUser?.primaryAddress ?? ''),
       upiId: upiId ?? (currentUser?.upiId ?? ''),
       whatsappAlerts: whatsappAlerts ?? (currentUser?.whatsappAlerts ?? true),
+      avatarUrl: avatarUrl ?? (currentUser?.avatarUrl),
     );
 
     _cachedProfiles[cleanEmail] = currentUser!;
@@ -191,6 +193,9 @@ class ApiClient {
               'name': cleanName,
               'email': cleanEmail,
               'phone': cleanPhone,
+              if (avatarUrl != null) 'avatarUrl': avatarUrl,
+              if (companyName != null) 'companyName': companyName,
+              if (gstin != null) 'gstin': gstin,
             }),
           )
           .timeout(const Duration(seconds: 4));
@@ -209,13 +214,9 @@ class ApiClient {
     required String phone,
     required String otpCode,
   }) async {
-    try {
-      await http.post(
-        Uri.parse('${AppConstants.baseUrl}/auth/verify-otp'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'phone': phone, 'otp': otpCode, 'role': 'customer'}),
-      ).timeout(const Duration(seconds: 4));
-    } catch (_) {}
+    throw Exception(
+      'Phone verification is unavailable until secure OTP verification is configured.',
+    );
   }
 
   // ==========================================
@@ -397,6 +398,8 @@ class ApiClient {
     String vehicleType = 'van',
     String? ownerRequirementId,
     double? appliedFare,
+    String paymentMethod = 'Cash to Pickup Pilot',
+    double? customDistanceKm,
   }) async {
     try {
       final response = await http
@@ -420,6 +423,8 @@ class ApiClient {
               'vehicleType': vehicleType,
               'ownerRequirementId': ownerRequirementId,
               'appliedFare': appliedFare,
+              'paymentMethod': paymentMethod,
+              'customDistanceKm': customDistanceKm ?? distanceKm,
             }),
           )
           .timeout(const Duration(seconds: 4));

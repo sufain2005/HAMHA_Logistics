@@ -287,7 +287,7 @@ exports.verifyOtp = async (req, res, next) => {
 
     // Lookup user by phone
     let userResult = await query(
-      `SELECT id, name, email, phone, role, is_verified 
+      `SELECT id, name, email, phone, role, is_verified, avatar_url, company_name, gstin 
        FROM users 
        WHERE phone = $1 
           OR REPLACE(phone, ' ', '') = REPLACE($1, ' ', '')
@@ -303,17 +303,16 @@ exports.verifyOtp = async (req, res, next) => {
       await query('UPDATE users SET is_verified = TRUE WHERE id = $1', [user.id]);
       user.is_verified = true;
     } else {
-      // Auto-create driver in database
       const salt = await bcrypt.genSalt(10);
       const defaultPass = await bcrypt.hash('Driver@123456', salt);
-      const assignedName = name || 'Driver Partner';
-      const assignedEmail = email || `driver.${cleanPhone.replace(/[^0-9]/g, '').slice(-8)}@hamhadrive.com`;
+      const assignedName = name || (role === 'driver' ? 'Driver Partner' : 'Shipper');
+      const assignedEmail = email || `${role}.${cleanPhone.replace(/[^0-9]/g, '').slice(-8)}@hamhadrive.com`;
 
       const insertRes = await query(
         `INSERT INTO users (name, email, phone, password_hash, role, is_verified)
          VALUES ($1, $2, $3, $4, $5, TRUE)
          ON CONFLICT (email) DO UPDATE SET phone = EXCLUDED.phone, is_verified = TRUE
-         RETURNING id, name, email, phone, role, is_verified, created_at`,
+         RETURNING id, name, email, phone, role, is_verified, avatar_url, created_at`,
         [assignedName, assignedEmail.toLowerCase(), cleanPhone, defaultPass, role]
       );
       user = insertRes.rows[0];
@@ -329,7 +328,6 @@ exports.verifyOtp = async (req, res, next) => {
       }
     }
 
-    // Attach vehicle info if driver
     let vehicle = null;
     if (user.role === 'driver') {
       const vRes = await query('SELECT * FROM vehicles WHERE driver_id = $1 LIMIT 1', [user.id]);
@@ -351,22 +349,26 @@ exports.verifyOtp = async (req, res, next) => {
 };
 
 /**
- * Update Current Authenticated Profile
+ * Update Current Authenticated Profile (with Avatar URL persistence)
  */
 exports.updateProfile = async (req, res, next) => {
   try {
-    const { name, phone, email } = req.body;
+    const { name, phone, email, avatarUrl, avatar_url, companyName, company_name, gstin } = req.body;
     const userId = req.user.id;
+    const finalAvatar = avatarUrl || avatar_url;
 
     const result = await query(
       `UPDATE users 
        SET name = COALESCE($1, name),
            phone = COALESCE($2, phone),
            email = COALESCE($3, email),
+           avatar_url = COALESCE($4, avatar_url),
+           company_name = COALESCE($5, company_name),
+           gstin = COALESCE($6, gstin),
            updated_at = NOW()
-       WHERE id = $4
-       RETURNING id, name, email, phone, role, is_verified, created_at`,
-      [name, phone, email?.toLowerCase(), userId]
+       WHERE id = $7
+       RETURNING id, name, email, phone, role, is_verified, avatar_url, company_name, gstin, created_at`,
+      [name, phone, email?.toLowerCase(), finalAvatar, companyName || company_name, gstin, userId]
     );
 
     if (result.rows.length === 0) {
@@ -386,7 +388,7 @@ exports.updateProfile = async (req, res, next) => {
 exports.getMe = async (req, res, next) => {
   try {
     const result = await query(
-      `SELECT u.id, u.name, u.email, u.phone, u.role, u.is_verified, u.created_at,
+      `SELECT u.id, u.name, u.email, u.phone, u.role, u.is_verified, u.avatar_url, u.company_name, u.gstin, u.created_at,
               v.type as vehicle_type, v.plate_number, v.model, v.is_online, v.is_available,
               ST_X(v.current_location::geometry) as current_lon,
               ST_Y(v.current_location::geometry) as current_lat

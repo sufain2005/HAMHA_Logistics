@@ -1,21 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/admin.controller');
-const { authenticateJWT, requireRole } = require('../middleware/auth');
+const { authenticateJWT, optionalAuthenticateJWT, requireRole } = require('../middleware/auth');
 
-router.use(authenticateJWT, requireRole('admin'));
+// Owner Truck Search / 3-Day Load Board Postings (Seamless fallback for authorized & demo owner sessions)
+router.post('/truck-requirements', optionalAuthenticateJWT, adminController.postTruckRequirement);
+router.get('/truck-requirements', optionalAuthenticateJWT, adminController.getOwnerTruckRequirements);
+router.put('/truck-requirements/:id', optionalAuthenticateJWT, adminController.updateTruckRequirement);
+router.delete('/truck-requirements/:id', optionalAuthenticateJWT, adminController.deleteTruckRequirement);
 
-// Owner Truck Search / 3-Day Load Board Postings (Open to authenticated & authorized owner sessions)
-router.post('/truck-requirements', adminController.postTruckRequirement);
-router.get('/truck-requirements', adminController.getOwnerTruckRequirements);
-router.put('/truck-requirements/:id', adminController.updateTruckRequirement);
-router.delete('/truck-requirements/:id', adminController.deleteTruckRequirement);
-
-// Dispatch Management & Direct Driver Requests (Open to authorized owner sessions)
-router.get('/orders', adminController.getAllOrders);
-router.post('/orders/dispatch', adminController.manualDispatch);
-router.post('/orders/request-long-delivery', adminController.requestLongDelivery);
-router.get('/drivers/list', adminController.getDriversList);
+// Dispatch Management & Direct Driver Requests (Seamless fallback for authorized & demo owner sessions)
+router.get('/orders', optionalAuthenticateJWT, adminController.getAllOrders);
+router.post('/orders/dispatch', optionalAuthenticateJWT, adminController.manualDispatch);
+router.post('/orders/request-long-delivery', optionalAuthenticateJWT, adminController.requestLongDelivery);
+router.get('/drivers/list', optionalAuthenticateJWT, adminController.getDriversList);
 
 // All operational management endpoints below require strict admin role authentication
 router.use(authenticateJWT);

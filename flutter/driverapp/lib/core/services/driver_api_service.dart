@@ -75,7 +75,7 @@ class DriverApiService {
       }
     } catch (_) {}
 
-    // Resilient offline / demo fallback with standard dummy OTP
+    // Resilient fallback with standard dummy OTP
     isDemoMode = true;
     return {
       'success': true,

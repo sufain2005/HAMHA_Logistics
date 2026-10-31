@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/models/quote_model.dart';
@@ -40,6 +41,9 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
   final _dropoffPincodeController = TextEditingController(text: '560066');
   final _contactNameController = TextEditingController(text: 'Receiving Dock Manager');
   final _contactPhoneController = TextEditingController(text: '+91 98450 99881');
+
+  // Selected Payment Method for Handover
+  String _selectedPaymentMethod = 'Cash to Pickup Pilot (Cash on Dispatch)';
 
   // Coordinates
   double _pickupLon = 73.0544;
@@ -121,16 +125,128 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
     }
   }
 
-  void _calculateDistance() {
-    // Determine realistic road distance between regions
-    if (_pickupState == _dropoffState) {
-      if (_pickupCityController.text.toLowerCase().contains(_dropoffCityController.text.toLowerCase())) {
-        _distanceKm = 24.5; // Intra-city
-      } else {
-        _distanceKm = 165.0; // Inter-district same state
+  static const Map<String, List<double>> _cityCoordinates = {
+    // Maharashtra
+    'thane': [73.0544, 19.2969],
+    'mumbai': [72.8777, 19.0760],
+    'navi mumbai': [73.0297, 19.0330],
+    'bhiwandi': [73.0544, 19.2969],
+    'pune': [73.8567, 18.5204],
+    'nashik': [73.7898, 19.9975],
+    'nagpur': [79.0882, 21.1458],
+    'aurangabad': [75.3433, 19.8762],
+    'chhatrapati sambhajinagar': [75.3433, 19.8762],
+    'kolhapur': [74.2433, 16.7050],
+    'solapur': [75.9064, 17.6599],
+    // Karnataka
+    'bengaluru': [77.5946, 12.9716],
+    'bangalore': [77.5946, 12.9716],
+    'whitefield': [77.7499, 12.9698],
+    'mysuru': [76.6394, 12.2958],
+    'hubli': [75.1240, 15.3647],
+    'belagavi': [74.4977, 15.8497],
+    // Gujarat
+    'ahmedabad': [72.5714, 23.0225],
+    'sanand': [72.3813, 22.9877],
+    'surat': [72.8311, 21.1702],
+    'vadodara': [73.1812, 22.3072],
+    'rajkot': [70.8022, 22.3039],
+    // Telangana & Andhra Pradesh
+    'hyderabad': [78.4867, 17.3850],
+    'visakhapatnam': [83.2185, 17.6868],
+    'vijayawada': [80.6480, 16.5062],
+    // Tamil Nadu
+    'chennai': [80.2707, 13.0827],
+    'coimbatore': [76.9558, 11.0168],
+    'madurai': [78.1198, 9.9252],
+    // Delhi NCR & North
+    'delhi': [77.2090, 28.6139],
+    'delhi ncr': [77.2090, 28.6139],
+    'gurgaon': [77.0266, 28.4595],
+    'noida': [77.3910, 28.5355],
+    'faridabad': [77.3178, 28.4089],
+    'jaipur': [75.7873, 26.9124],
+    'lucknow': [80.9462, 26.8467],
+    'kanpur': [80.3319, 26.4499],
+    'chandigarh': [76.7794, 30.7333],
+    // Central & East
+    'indore': [75.8577, 22.7196],
+    'bhopal': [77.4126, 23.2599],
+    'kolkata': [88.3639, 22.5726],
+    'patna': [85.1376, 25.5941],
+    'kochi': [76.2673, 9.9312],
+  };
+
+  static const Map<String, List<double>> _stateCoordinates = {
+    'maharashtra': [73.8567, 18.5204],
+    'karnataka': [77.5946, 12.9716],
+    'gujarat': [72.5714, 23.0225],
+    'telangana': [78.4867, 17.3850],
+    'tamil nadu': [80.2707, 13.0827],
+    'delhi ncr': [77.2090, 28.6139],
+    'uttar pradesh': [80.9462, 26.8467],
+    'haryana': [77.0266, 28.4595],
+    'rajasthan': [75.7873, 26.9124],
+    'madhya pradesh': [77.4126, 23.2599],
+    'west bengal': [88.3639, 22.5726],
+    'andhra pradesh': [80.6480, 16.5062],
+  };
+
+  List<double> _resolveCoordinates(String cityText, String stateText, {required bool isPickup}) {
+    final lowerCity = cityText.toLowerCase();
+    for (final entry in _cityCoordinates.entries) {
+      if (lowerCity.contains(entry.key)) {
+        return entry.value;
       }
+    }
+    final lowerState = stateText.toLowerCase();
+    for (final entry in _stateCoordinates.entries) {
+      if (lowerState.contains(entry.key)) {
+        return entry.value;
+      }
+    }
+    return isPickup ? [73.0544, 19.2969] : [77.7499, 12.9698];
+  }
+
+  double _haversineKm(double lon1, double lat1, double lon2, double lat2) {
+    const R = 6371.0;
+    final dLat = (lat2 - lat1) * (math.pi / 180.0);
+    final dLon = (lon2 - lon1) * (math.pi / 180.0);
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1 * (math.pi / 180.0)) * math.cos(lat2 * (math.pi / 180.0)) *
+        math.sin(dLon / 2) * math.sin(dLon / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return R * c;
+  }
+
+  void _calculateDistance() {
+    final pickupCoords = _resolveCoordinates(_pickupCityController.text, _pickupState, isPickup: true);
+    final dropoffCoords = _resolveCoordinates(_dropoffCityController.text, _dropoffState, isPickup: false);
+
+    _pickupLon = pickupCoords[0];
+    _pickupLat = pickupCoords[1];
+    _dropoffLon = dropoffCoords[0];
+    _dropoffLat = dropoffCoords[1];
+
+    final pCity = _pickupCityController.text.trim().toLowerCase();
+    final dCity = _dropoffCityController.text.trim().toLowerCase();
+
+    // Check if intra-city or identical locations
+    final isSameCity = (pCity.isNotEmpty && dCity.isNotEmpty && (pCity.contains(dCity) || dCity.contains(pCity))) &&
+        (_pickupState.toLowerCase() == _dropoffState.toLowerCase());
+
+    if (isSameCity) {
+      // Dynamic intra-city road distance between 14.0 km and 38.0 km based on address differences
+      final addressHash = (_pickupStreetController.text.length + _dropoffStreetController.text.length + _pickupBuildingController.text.length) % 25;
+      _distanceKm = 14.0 + addressHash.toDouble();
     } else {
-      _distanceKm = 890.0; // Inter-state corridor (e.g. MH to KA)
+      final straightKm = _haversineKm(_pickupLon, _pickupLat, _dropoffLon, _dropoffLat);
+      if (straightKm < 30.0) {
+        _distanceKm = math.max(18.0, straightKm * 1.35);
+      } else {
+        // Inter-city highway road distance (multiplying straight-line by 1.32x for winding road network)
+        _distanceKm = math.max(45.0, (straightKm * 1.32).roundToDouble());
+      }
     }
   }
 
@@ -278,6 +394,8 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
         vehicleType: _selectedOwnerRoute != null ? _selectedOwnerRoute!.truckType : _selectedVehicle,
         ownerRequirementId: _selectedOwnerRoute?.id,
         appliedFare: _selectedOwnerRoute?.offeredFare,
+        paymentMethod: _selectedPaymentMethod,
+        customDistanceKm: _distanceKm,
       );
 
       if (!mounted) return;
@@ -504,6 +622,7 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
                                 labelText: 'Landmark',
                                 hintText: 'e.g. Near Indian Oil Petrol Pump',
                               ),
+                              onChanged: (_) => _calculateQuote(),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -673,6 +792,7 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
                                 labelText: 'Landmark',
                                 hintText: 'e.g. Opposite Metro Station Gate 2',
                               ),
+                              onChanged: (_) => _calculateQuote(),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -766,6 +886,12 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
                   // SECTION 5: OWNER ADDED CORRIDOR ROUTES (>20KG & LONG DISTANCE)
                   // -----------------------------------------------------------------
                   _buildOwnerCorridorsSection(),
+                  const SizedBox(height: 20),
+
+                  // -----------------------------------------------------------------
+                  // SECTION 6: CONSIGNMENT PAYMENT MODE (CASH / PILOT QR / ONLINE)
+                  // -----------------------------------------------------------------
+                  _buildPaymentMethodSection(),
                   const SizedBox(height: 24),
 
                   // Booking CTA Button
@@ -867,24 +993,30 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.calculate_outlined, color: HamhaTheme.crimsonRed, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'TRANSPARENT FREIGHT TARIFF BREAKDOWN',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: HamhaTheme.deepBlack, letterSpacing: 0.6),
-                  ),
-                ],
+              const Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.calculate_outlined, color: HamhaTheme.crimsonRed, size: 20),
+                    SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'TRANSPARENT FREIGHT TARIFF BREAKDOWN',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: HamhaTheme.deepBlack, letterSpacing: 0.4),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 6),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
                   color: const Color(0xFF059669).withAlpha(20),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Text(
-                  'SYNCED WITH ADMIN PRICING',
+                  'SYNCED WITH ADMIN',
                   style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF059669)),
                 ),
               ),
@@ -907,7 +1039,12 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
             _buildCostLine('Base Consignment Fee:', _currentQuote?.breakdown['baseFee'] ?? '₹350'),
             _buildCostLine('Distance Fare (${_distanceKm.toStringAsFixed(0)} KM):', _currentQuote?.breakdown['distanceRate'] ?? '---'),
             _buildCostLine('Weight Charge:', _currentQuote?.breakdown['weightSurcharge'] ?? '₹0'),
-            _buildCostLine('Statutory GST (18%):', _currentQuote?.breakdown['gst'] ?? '---'),
+            _buildCostLine(
+              'Statutory GST (18%):',
+              _currentQuote?.breakdown['gstTax'] ??
+                  _currentQuote?.breakdown['gst'] ??
+                  (_currentQuote != null ? '₹${((_currentQuote!.fareAmount * 0.18) / 1.18).round()}' : '₹0'),
+            ),
             if (_selectedOwnerRoute != null) ...[
               const SizedBox(height: 10),
               Container(
@@ -1241,12 +1378,7 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
     );
   }
 
-  Widget _buildSectionCard({
-    required String title,
-    required IconData icon,
-    Color iconColor = HamhaTheme.crimsonRed,
-    required List<Widget> children,
-  }) {
+  Widget _buildPaymentMethodSection() {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -1260,21 +1392,105 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
-              Icon(icon, color: iconColor, size: 20),
-              const SizedBox(width: 8),
+              Icon(Icons.payment, color: HamhaTheme.crimsonRed, size: 20),
+              SizedBox(width: 8),
               Text(
-                title,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: HamhaTheme.deepBlack),
+                'SELECT CONSIGNMENT PAYMENT MODE',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: HamhaTheme.deepBlack, letterSpacing: 0.5),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           const Divider(height: 1, color: HamhaTheme.borderSubtle),
-          const SizedBox(height: 16),
-          ...children,
+          const SizedBox(height: 14),
+
+          _buildPaymentRadioTile(
+            title: 'Cash to Pickup Pilot (Cash on Dispatch)',
+            subtitle: 'Pay physical cash to the driver upon consignment collection at pickup address',
+            icon: Icons.payments_outlined,
+            value: 'Cash to Pickup Pilot (Cash on Dispatch)',
+          ),
+          const SizedBox(height: 10),
+
+          _buildPaymentRadioTile(
+            title: 'Direct Driver UPI QR Code (Scan Pilot QR)',
+            subtitle: 'Pilot will show their personalized HAMHA UPI QR code at pickup for instant phone scan',
+            icon: Icons.qr_code_scanner,
+            value: 'Direct Driver UPI QR Code (Scan Pilot QR)',
+          ),
+          const SizedBox(height: 10),
+
+          _buildPaymentRadioTile(
+            title: 'Online Advance (UPI / Net Banking / Card)',
+            subtitle: 'Instant digital prepayment with automated GST invoice generation',
+            icon: Icons.account_balance,
+            value: 'Online UPI / Corporate Net Banking',
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentRadioTile({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required String value,
+  }) {
+    final isSelected = _selectedPaymentMethod == value;
+    return InkWell(
+      onTap: () => setState(() => _selectedPaymentMethod = value),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isSelected ? HamhaTheme.crimsonRed.withAlpha(15) : HamhaTheme.warmCream,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? HamhaTheme.crimsonRed : HamhaTheme.borderSubtle,
+            width: isSelected ? 1.8 : 1.0,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? HamhaTheme.crimsonRed : HamhaTheme.deepBlack,
+              size: 22,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: isSelected ? HamhaTheme.crimsonRed : HamhaTheme.deepBlack,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(fontSize: 10.5, color: HamhaTheme.textMuted),
+                  ),
+                ],
+              ),
+            ),
+            Radio<String>(
+              value: value,
+              groupValue: _selectedPaymentMethod,
+              activeColor: HamhaTheme.crimsonRed,
+              onChanged: (val) {
+                if (val != null) setState(() => _selectedPaymentMethod = val);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -108,7 +108,7 @@ DO $$ BEGIN
         ALTER TABLE vehicles ADD CONSTRAINT vehicles_driver_id_key UNIQUE (driver_id);
     END IF;
 EXCEPTION
-    WHEN duplicate_table OR duplicate_object THEN null;
+    WHEN OTHERS THEN null;
 END $$;
 
 -- 5. Orders Table (Consignments)

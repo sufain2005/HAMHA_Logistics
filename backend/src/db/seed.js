@@ -47,6 +47,7 @@ async function seedDatabase() {
     const driverId = driverRes.rows[0].id;
 
     // 2. Clean up any existing seed vehicles to ensure 100% idempotent insertion
+    await client.query('ALTER TABLE vehicles ALTER COLUMN driver_id DROP NOT NULL');
     await client.query(
       'DELETE FROM vehicles WHERE plate_number IN ($1, $2) OR driver_id = $3',
       ['MH-04-TR-9081', 'MH-04-AB-1290', driverId]

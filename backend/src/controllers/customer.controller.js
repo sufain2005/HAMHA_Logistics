@@ -36,29 +36,34 @@ exports.calculateQuote = async (req, res, next) => {
       dropoffLat,
       cargoType = 'Standard Package',
       vehicleType = 'van',
+      customDistanceKm,
     } = req.body;
 
-    if (!weightKg || !pickupLon || !pickupLat || !dropoffLon || !dropoffLat) {
+    if (!weightKg) {
       return res.status(400).json({
         success: false,
-        message: 'Weight (kg) and both pickup/dropoff coordinates (lon, lat) are required.',
+        message: 'Weight (kg) is required.',
       });
     }
 
-    // Use PostGIS ST_Distance to compute accurate great-circle ground distance in kilometers
+    // Use customDistanceKm if provided, or PostGIS ST_Distance
     let estimatedDistanceKm = 15.0;
-    try {
-      const distanceResult = await query(
-        `SELECT ST_Distance(
-          ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
-          ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography
-        ) / 1000.0 AS distance_km`,
-        [pickupLon, pickupLat, dropoffLon, dropoffLat]
-      );
-      const straightLineKm = parseFloat(distanceResult.rows[0]?.distance_km) || 12.0;
-      estimatedDistanceKm = Math.max(2.0, Math.round((straightLineKm * 1.3) * 10) / 10);
-    } catch (_) {
-      estimatedDistanceKm = 24.5;
+    if (customDistanceKm && parseFloat(customDistanceKm) > 0) {
+      estimatedDistanceKm = parseFloat(customDistanceKm);
+    } else if (pickupLon && pickupLat && dropoffLon && dropoffLat) {
+      try {
+        const distanceResult = await query(
+          `SELECT ST_Distance(
+            ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+            ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography
+          ) / 1000.0 AS distance_km`,
+          [pickupLon, pickupLat, dropoffLon, dropoffLat]
+        );
+        const straightLineKm = parseFloat(distanceResult.rows[0]?.distance_km) || 12.0;
+        estimatedDistanceKm = Math.max(2.0, Math.round((straightLineKm * 1.3) * 10) / 10);
+      } catch (_) {
+        estimatedDistanceKm = 24.5;
+      }
     }
     
     // Average highway/urban speed: 40 km/h + 20 min handling buffer
@@ -100,6 +105,7 @@ exports.calculateQuote = async (req, res, next) => {
           baseFee: `₹${baseFee.toFixed(0)}`,
           distanceRate: `₹${kmRate.toFixed(0)}/km (₹${distanceFee.toFixed(0)})`,
           weightSurcharge: `₹${weightFee.toFixed(0)} (${excessWeight.toFixed(1)}kg excess)`,
+          gst: `₹${gstTax.toFixed(0)}`,
           gstTax: `${gstPercent}% GST (₹${gstTax.toFixed(0)})`,
         },
       },
@@ -131,26 +137,32 @@ exports.createOrder = async (req, res, next) => {
       dropoffContactPhone,
       ownerRequirementId,
       appliedFare,
+      paymentMethod = 'Cash to Pickup Pilot',
+      customDistanceKm,
     } = req.body;
 
-    if (!cargoType || !weightKg || !pickupAddress || !dropoffAddress || !pickupLon || !pickupLat || !dropoffLon || !dropoffLat) {
+    if (!cargoType || !weightKg || !pickupAddress || !dropoffAddress) {
       return res.status(400).json({
         success: false,
         message: 'Missing required shipment parameters.',
       });
     }
 
-    // Calculate distance & fare using PostGIS
-    const distanceResult = await query(
-      `SELECT ST_Distance(
-        ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
-        ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography
-      ) / 1000.0 AS distance_km`,
-      [pickupLon, pickupLat, dropoffLon, dropoffLat]
-    );
-
-    const straightLineKm = parseFloat(distanceResult.rows[0].distance_km) || 1.0;
-    const distanceKm = Math.round((straightLineKm * 1.3) * 10) / 10;
+    // Calculate distance & fare using PostGIS or customDistanceKm
+    let distanceKm = customDistanceKm ? parseFloat(customDistanceKm) : 15.0;
+    if (!customDistanceKm && pickupLon && pickupLat && dropoffLon && dropoffLat) {
+      try {
+        const distanceResult = await query(
+          `SELECT ST_Distance(
+            ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+            ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography
+          ) / 1000.0 AS distance_km`,
+          [pickupLon, pickupLat, dropoffLon, dropoffLat]
+        );
+        const straightLineKm = parseFloat(distanceResult.rows[0]?.distance_km) || 12.0;
+        distanceKm = Math.round((straightLineKm * 1.3) * 10) / 10;
+      } catch (_) {}
+    }
     const durationMin = Math.round((distanceKm / 35.0) * 60) + 15;
     
     // Calculate default fare or use owner corridor applied fare
@@ -177,23 +189,28 @@ exports.createOrder = async (req, res, next) => {
       } catch (_) {}
     }
 
+    const pLon = pickupLon || 73.0544;
+    const pLat = pickupLat || 19.2969;
+    const dLon = dropoffLon || 73.8567;
+    const dLat = dropoffLat || 18.5204;
+
     const result = await query(
       `INSERT INTO orders (
         order_code, customer_id, cargo_type, weight_kg, package_description,
         pickup_address, pickup_location, pickup_contact_name, pickup_contact_phone,
         dropoff_address, dropoff_location, dropoff_contact_name, dropoff_contact_phone,
-        fare_amount, distance_km, estimated_duration_min, status, payment_status
+        fare_amount, distance_km, estimated_duration_min, status, payment_status, payment_method
       ) VALUES (
         $1, $2, $3, $4, $5,
         $6, ST_SetSRID(ST_MakePoint($7, $8), 4326)::geography, $9, $10,
         $11, ST_SetSRID(ST_MakePoint($12, $13), 4326)::geography, $14, $15,
-        $16, $17, $18, 'pending', 'pending'
-      ) RETURNING id, order_code, status, fare_amount, distance_km, estimated_duration_min, created_at`,
+        $16, $17, $18, 'pending', 'pending', $19
+      ) RETURNING id, order_code, status, fare_amount, distance_km, estimated_duration_min, payment_method, created_at`,
       [
         orderCode, customerId, cargoType, weightKg, finalDescription,
-        pickupAddress, pickupLon, pickupLat, pickupContactName || req.user.name, pickupContactPhone || req.user.phone,
-        dropoffAddress, dropoffLon, dropoffLat, dropoffContactName || '', dropoffContactPhone || '',
-        calculatedFare, distanceKm, durationMin
+        pickupAddress, pLon, pLat, pickupContactName || req.user.name, pickupContactPhone || req.user.phone,
+        dropoffAddress, dLon, dLat, dropoffContactName || '', dropoffContactPhone || '',
+        calculatedFare, distanceKm, durationMin, paymentMethod
       ]
     );
 

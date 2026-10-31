@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/network/api_client.dart';
 import '../../auth/screens/login_screen.dart';
-import '../../auth/widgets/terms_conditions_dialog.dart';
 
 class ProfileSettingsScreen extends StatefulWidget {
   final VoidCallback onProfileUpdated;
@@ -17,12 +16,21 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
-  late TextEditingController _companyController;
-  late TextEditingController _gstinController;
   late TextEditingController _addressController;
   late TextEditingController _upiController;
+  String _selectedPaymentMethod = 'Cash to Pickup Pilot (Cash on Dispatch)';
   bool _whatsappAlerts = true;
   bool _isSaving = false;
+  String? _avatarUrl;
+
+  final List<String> _avatarPresets = [
+    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
+  ];
 
   @override
   void initState() {
@@ -31,12 +39,11 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
     _nameController = TextEditingController(text: user?.name ?? '');
     _emailController = TextEditingController(text: user?.email ?? '');
     _phoneController = TextEditingController(text: user?.phone ?? '');
-    _companyController = TextEditingController(text: user?.companyName ?? 'Apex Commercial Logistics');
-    _gstinController = TextEditingController(text: user?.gstin ?? '27AAACA9876Q1Z5');
     _addressController = TextEditingController(
         text: user?.primaryAddress ?? 'Plot 42, Bhiwandi Logistics Corridor, Thane, Maharashtra');
     _upiController = TextEditingController(text: user?.upiId ?? 'ms@okaxis');
     _whatsappAlerts = user?.whatsappAlerts ?? true;
+    _avatarUrl = user?.avatarUrl;
   }
 
   @override
@@ -44,11 +51,143 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
-    _companyController.dispose();
-    _gstinController.dispose();
     _addressController.dispose();
     _upiController.dispose();
     super.dispose();
+  }
+
+  void _showAvatarPickerSheet() {
+    final customUrlController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: HamhaTheme.crispWhite,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+            left: 20,
+            right: 20,
+            top: 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Select Profile Picture',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      color: HamhaTheme.deepBlack,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: HamhaTheme.textMuted),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Choose a profile avatar preset or paste an image URL. It will be saved securely to the database.',
+                style: TextStyle(fontSize: 12, color: HamhaTheme.textMuted),
+              ),
+              const SizedBox(height: 16),
+
+              // Avatar Presets Grid
+              SizedBox(
+                height: 72,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _avatarPresets.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (context, i) {
+                    final url = _avatarPresets[i];
+                    final isSelected = _avatarUrl == url;
+                    return InkWell(
+                      onTap: () {
+                        setState(() => _avatarUrl = url);
+                        Navigator.pop(ctx);
+                        _persistAvatar(url);
+                      },
+                      borderRadius: BorderRadius.circular(36),
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSelected ? HamhaTheme.crimsonRed : Colors.transparent,
+                            width: 2.5,
+                          ),
+                        ),
+                        child: CircleAvatar(
+                          radius: 28,
+                          backgroundImage: NetworkImage(url),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // Custom Image URL Input
+              TextFormField(
+                controller: customUrlController,
+                decoration: InputDecoration(
+                  labelText: 'Custom Photo URL (HTTPS)',
+                  hintText: 'https://example.com/my-photo.jpg',
+                  prefixIcon: const Icon(Icons.link, color: HamhaTheme.deepBlack),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.check_circle, color: HamhaTheme.crimsonRed),
+                    onPressed: () {
+                      final url = customUrlController.text.trim();
+                      if (url.isNotEmpty && url.startsWith('http')) {
+                        setState(() => _avatarUrl = url);
+                        Navigator.pop(ctx);
+                        _persistAvatar(url);
+                      }
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _persistAvatar(String url) async {
+    try {
+      await ApiClient().updateProfile(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        phone: _phoneController.text.trim(),
+        avatarUrl: url,
+        primaryAddress: _addressController.text.trim(),
+        upiId: _upiController.text.trim(),
+        whatsappAlerts: _whatsappAlerts,
+      );
+      widget.onProfileUpdated();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: HamhaTheme.statusDelivered,
+            content: Text('Profile picture updated and saved to database!'),
+          ),
+        );
+      }
+    } catch (_) {}
   }
 
   Future<void> _handleSaveProfile() async {
@@ -61,8 +200,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
         phone: _phoneController.text.trim(),
-        companyName: _companyController.text.trim(),
-        gstin: _gstinController.text.trim(),
+        avatarUrl: _avatarUrl,
         primaryAddress: _addressController.text.trim(),
         upiId: _upiController.text.trim(),
         whatsappAlerts: _whatsappAlerts,
@@ -119,7 +257,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // 1. Shipper Identification Header Card
+                  // 1. Shipper Identification Header Card with Avatar Editor
                   Card(
                     color: HamhaTheme.crispWhite,
                     elevation: 2,
@@ -131,24 +269,56 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                       padding: const EdgeInsets.all(22.0),
                       child: Row(
                         children: [
-                          Container(
-                            width: 64,
-                            height: 64,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: HamhaTheme.deepBlack,
-                              border: Border.all(color: HamhaTheme.crimsonRed, width: 2.5),
-                            ),
-                            child: Center(
-                              child: Text(
-                                initial,
-                                style: const TextStyle(
-                                  color: HamhaTheme.crispWhite,
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
+                          Stack(
+                            children: [
+                              Container(
+                                width: 68,
+                                height: 68,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: HamhaTheme.deepBlack,
+                                  border: Border.all(color: HamhaTheme.crimsonRed, width: 2.5),
+                                  image: _avatarUrl != null && _avatarUrl!.isNotEmpty
+                                      ? DecorationImage(
+                                          image: NetworkImage(_avatarUrl!),
+                                          fit: BoxFit.cover,
+                                        )
+                                      : null,
+                                ),
+                                child: (_avatarUrl == null || _avatarUrl!.isEmpty)
+                                    ? Center(
+                                        child: Text(
+                                          initial,
+                                          style: const TextStyle(
+                                            color: HamhaTheme.crispWhite,
+                                            fontSize: 26,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                              Positioned(
+                                bottom: -2,
+                                right: -2,
+                                child: InkWell(
+                                  onTap: _showAvatarPickerSheet,
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(5),
+                                    decoration: const BoxDecoration(
+                                      color: HamhaTheme.crimsonRed,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.camera_alt,
+                                      color: Colors.white,
+                                      size: 14,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
+                            ],
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -156,7 +326,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  user?.name ?? 'Shipper',
+                                  _nameController.text.isNotEmpty ? _nameController.text : (user?.name ?? 'Shipper'),
                                   style: const TextStyle(
                                     fontSize: 22,
                                     fontWeight: FontWeight.w900,
@@ -164,11 +334,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 3),
-                                Text(
-                                  _companyController.text.isNotEmpty
-                                      ? _companyController.text
-                                      : 'Verified Business Account',
-                                  style: const TextStyle(fontSize: 13, color: HamhaTheme.textMuted, fontWeight: FontWeight.w600),
+                                const Text(
+                                  'Registered Customer Account • Priority Dispatch',
+                                  style: TextStyle(fontSize: 12, color: HamhaTheme.textMuted, fontWeight: FontWeight.w600),
                                 ),
                                 const SizedBox(height: 6),
                                 Container(
@@ -178,7 +346,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: const Text(
-                                    'GST VERIFIED SHIPPER • ACTIVE FLEET ACCESS',
+                                    'VERIFIED SHIPPER • ACTIVE FLEET ACCESS',
                                     style: TextStyle(
                                       color: HamhaTheme.crispWhite,
                                       fontSize: 10,
@@ -196,37 +364,20 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                   ),
                   const SizedBox(height: 18),
 
-                  // 2. Personal & Business Information
+                  // 2. Personal Information (No GSTIN or Company Name required for customer)
                   _buildSectionContainer(
-                    title: '1. Personal & Company Information',
-                    icon: Icons.business,
+                    title: '1. Personal Information',
+                    icon: Icons.person_outline,
                     children: [
                       TextFormField(
                         controller: _nameController,
                         style: const TextStyle(color: HamhaTheme.textDark, fontWeight: FontWeight.w600),
                         decoration: const InputDecoration(
-                          labelText: 'Authorized Contact Name',
+                          labelText: 'Full Name',
+                          hintText: 'e.g. Alex Mercer',
                           prefixIcon: Icon(Icons.person_outline, color: HamhaTheme.deepBlack),
                         ),
-                        validator: (val) => val == null || val.trim().isEmpty ? 'Enter contact name' : null,
-                      ),
-                      const SizedBox(height: 14),
-                      TextFormField(
-                        controller: _companyController,
-                        style: const TextStyle(color: HamhaTheme.textDark, fontWeight: FontWeight.w600),
-                        decoration: const InputDecoration(
-                          labelText: 'Registered Business / Entity Name',
-                          prefixIcon: Icon(Icons.apartment, color: HamhaTheme.deepBlack),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      TextFormField(
-                        controller: _gstinController,
-                        style: const TextStyle(color: HamhaTheme.textDark, fontWeight: FontWeight.w600),
-                        decoration: const InputDecoration(
-                          labelText: 'GSTIN (Goods and Services Tax ID)',
-                          prefixIcon: Icon(Icons.receipt_long, color: HamhaTheme.deepBlack),
-                        ),
+                        validator: (val) => val == null || val.trim().isEmpty ? 'Enter name' : null,
                       ),
                       const SizedBox(height: 14),
                       Row(
@@ -250,7 +401,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                               keyboardType: TextInputType.emailAddress,
                               style: const TextStyle(color: HamhaTheme.textDark, fontWeight: FontWeight.w600),
                               decoration: const InputDecoration(
-                                labelText: 'Corporate Email',
+                                labelText: 'Email Address',
                                 prefixIcon: Icon(Icons.email_outlined, color: HamhaTheme.deepBlack),
                               ),
                               validator: (val) => val == null || !val.contains('@') ? 'Enter email' : null,
@@ -280,11 +431,44 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                   ),
                   const SizedBox(height: 18),
 
-                  // 4. Payment & Indian Freight Billing Preferences (INR & UPI)
+                  // 4. Payment Preferences: Cash, Direct QR to Pilot, or Online
                   _buildSectionContainer(
                     title: '3. Payments & Digital Invoicing (INR ₹)',
                     icon: Icons.account_balance_wallet_outlined,
                     children: [
+                      const Text(
+                        'PREFERRED PAYMENT MODE AT DISPATCH',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: HamhaTheme.textMuted, letterSpacing: 0.6),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Option 1: Cash to Pickup Pilot
+                      _buildPaymentOptionTile(
+                        title: 'Cash to Pickup Pilot',
+                        subtitle: 'Pay physical cash to the dispatch pilot upon consignment collection',
+                        icon: Icons.payments_outlined,
+                        value: 'Cash to Pickup Pilot (Cash on Dispatch)',
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Option 2: Direct QR Code to Pickup Pilot
+                      _buildPaymentOptionTile(
+                        title: 'Direct Driver UPI QR Code',
+                        subtitle: 'Scan pilot\'s live UPI QR code directly on their mobile during pickup',
+                        icon: Icons.qr_code_scanner,
+                        value: 'Direct Driver UPI QR Code (Scan Pilot QR)',
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Option 3: Online UPI / Net Banking
+                      _buildPaymentOptionTile(
+                        title: 'Online UPI / Net Banking',
+                        subtitle: 'Instant digital invoice settlement via verified payment gateway',
+                        icon: Icons.account_balance,
+                        value: 'Online UPI / Corporate Net Banking',
+                      ),
+                      const SizedBox(height: 16),
+
                       TextFormField(
                         controller: _upiController,
                         style: const TextStyle(color: HamhaTheme.textDark, fontWeight: FontWeight.w600),
@@ -325,30 +509,13 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                   ),
                   const SizedBox(height: 22),
 
-                  // 5. About HAMHA Logistics Platform & Support
+                  // 5. Clean About Company (Name & Version only as requested)
                   _buildSectionContainer(
-                    title: '4. About HAMHA Logistics & Compliance',
+                    title: '4. About HAMHA Logistics',
                     icon: Icons.info_outline,
                     children: [
-                      _buildInfoRow('Engine Version', 'v2.4.0 (National Enterprise Freight Network)'),
-                      _buildInfoRow('Geospatial Engine', 'Mapbox Vector + Neon PostGIS (SRID 4326)'),
-                      _buildInfoRow('Currency Standard', 'Indian Rupee (INR ₹) with 18% Freight GST'),
-                      _buildInfoRow('24/7 Operations Hotline', '+91 (800) 555-HAMHA'),
-                      _buildInfoRow('Official Grievance Desk', 'support@hamhalogistics.in'),
-                      const SizedBox(height: 16),
-                      OutlinedButton.icon(
-                        onPressed: () => TermsConditionsDialog.show(context),
-                        icon: const Icon(Icons.gavel_outlined, color: HamhaTheme.deepBlack, size: 18),
-                        label: const Text(
-                          'VIEW COMMERCIAL CARRIAGE TERMS & CARGO POLICY',
-                          style: TextStyle(color: HamhaTheme.deepBlack, fontWeight: FontWeight.bold, fontSize: 12),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: HamhaTheme.borderSubtle, width: 1.5),
-                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
+                      _buildInfoRow('Company Name', 'HAMHA Logistics Pvt. Ltd.'),
+                      _buildInfoRow('App Version', 'v2.4.0'),
                     ],
                   ),
                   const SizedBox(height: 22),
@@ -379,6 +546,68 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentOptionTile({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required String value,
+  }) {
+    final isSelected = _selectedPaymentMethod == value;
+    return InkWell(
+      onTap: () => setState(() => _selectedPaymentMethod = value),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isSelected ? HamhaTheme.crimsonRed.withAlpha(15) : HamhaTheme.warmCream,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? HamhaTheme.crimsonRed : HamhaTheme.borderSubtle,
+            width: isSelected ? 1.8 : 1.0,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? HamhaTheme.crimsonRed : HamhaTheme.deepBlack,
+              size: 22,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: isSelected ? HamhaTheme.crimsonRed : HamhaTheme.deepBlack,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(fontSize: 11, color: HamhaTheme.textMuted),
+                  ),
+                ],
+              ),
+            ),
+            Radio<String>(
+              value: value,
+              groupValue: _selectedPaymentMethod,
+              activeColor: HamhaTheme.crimsonRed,
+              onChanged: (val) {
+                if (val != null) setState(() => _selectedPaymentMethod = val);
+              },
+            ),
+          ],
         ),
       ),
     );
