@@ -1134,10 +1134,8 @@ class _RequestLongDeliveryModalState extends State<_RequestLongDeliveryModal> {
                         controller: _driverIdController,
                         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
                         decoration: InputDecoration(
-                          hintText: 'e.g. 202680700001JS, 202698200001V or phone number',
-                        decoration: InputDecoration(
                           prefixIcon: const Icon(Icons.badge, size: 18, color: AdminTheme.crimsonRed),
-                          hintText: 'Enter Driver UUID (e.g. 2ff1fda4-bea5-4e97-bdf4-755a6fc4a2d3)',
+                          hintText: 'e.g. 202680700001JS, 202698200001V or phone number',
                           filled: true,
                           fillColor: AdminTheme.canvasBg,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderSubtle)),

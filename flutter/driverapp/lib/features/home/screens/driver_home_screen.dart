@@ -1528,7 +1528,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   Navigator.pop(ctx);
                   try {
                     await DriverApiService().contactOwnerForRequirement(
-                      requirementId: req.id,
+                      req.id,
                       message: 'Driver ${DriverApiService().currentDriver?.name ?? "Partner"} is ready to fulfill this requirement.',
                     );
                     if (mounted) {
