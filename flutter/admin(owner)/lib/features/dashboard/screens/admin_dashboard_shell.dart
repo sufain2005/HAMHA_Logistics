@@ -1521,7 +1521,6 @@ class _AdminDashboardShellState extends State<AdminDashboardShell> {
       ],
     );
   }
-  }
 
   void _showManualDispatchModal(FleetDriverModel driver) {
     showDialog(
