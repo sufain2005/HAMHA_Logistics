@@ -67,7 +67,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     final posts = await DriverApiService().searchTruckRequirements(state: _currentState);
     if (mounted) {
       setState(() {
-        _ownerBroadcasts = posts;
+        _ownerBroadcasts = posts.isNotEmpty ? posts : TruckRequirementModel.sampleRequirements(_currentState);
         _isLoadingBroadcasts = false;
       });
     }
@@ -1341,19 +1341,19 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Flexible(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(Icons.verified_user, size: 12, color: DriverTheme.statusOnline),
                               const SizedBox(width: 4),
-                              Flexible(
+                              Expanded(
                                 child: Text(
                                   '${req.ownerName} • ${req.ownerCompany}',
                                   style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: DriverTheme.deepBlack),
+                                  maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -1389,7 +1389,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: DriverTheme.crimsonRed,
                             foregroundColor: DriverTheme.crispWhite,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
                           child: const Text('VIEW / APPLY', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),

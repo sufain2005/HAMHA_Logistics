@@ -69,27 +69,53 @@ exports.calculateQuote = async (req, res, next) => {
     // Average highway/urban speed: 40 km/h + 20 min handling buffer
     const estimatedDurationMin = Math.round((estimatedDistanceKm / 40.0) * 60) + 20;
 
-    // Dynamic Admin Tariff Calculation (in INR ₹)
-    const tariffs = systemTariffs;
-    const baseFee = tariffs.baseFee || 350.0;
-    
-    // Determine per-km rate from vehicle type or default
-    let kmRate = tariffs.perKmRate || 25.0;
-    if (tariffs.vehicleRates && tariffs.vehicleRates[vehicleType]) {
-      kmRate = tariffs.vehicleRates[vehicleType];
+    // Vehicle-specific base fee, per-km rate, and allowance in INR (₹)
+    const tariffs = systemTariffs || {};
+    let baseFee = 350.0;
+    let kmRate = 22.0;
+    let allowanceKg = 50.0;
+    let perKgRate = 12.0;
+    let minFare = 350.0;
+
+    const vType = (vehicleType || 'van').toLowerCase();
+    if (vType === 'bike') {
+      baseFee = 50.0;
+      kmRate = 10.0;
+      allowanceKg = 5.0;
+      perKgRate = 8.0;
+      minFare = 80.0;
+    } else if (vType === 'mini_van' || vType === 'van') {
+      baseFee = 350.0;
+      kmRate = 22.0;
+      allowanceKg = 50.0;
+      perKgRate = 12.0;
+      minFare = 400.0;
+    } else if (vType.includes('truck') || vType === 'heavy_6tire' || vType === 'box_truck') {
+      baseFee = 1500.0;
+      kmRate = 42.0;
+      allowanceKg = 500.0;
+      perKgRate = 15.0;
+      minFare = 2000.0;
     }
 
-    const distanceFee = estimatedDistanceKm * kmRate;
-    
-    // Weight surcharge: weight above base allowance (e.g. 10kg)
-    const allowanceKg = tariffs.weightBaseAllowanceKg || 10.0;
+    // Dynamic Admin Tariff overrides if configured by Owner
+    if (tariffs.baseFee && tariffs.baseFee > 0 && vType !== 'bike') {
+      baseFee = tariffs.baseFee;
+    }
+    if (tariffs.vehicleRates && tariffs.vehicleRates[vType]) {
+      kmRate = tariffs.vehicleRates[vType];
+    } else if (tariffs.perKmRate && tariffs.perKmRate > 0 && vType !== 'bike') {
+      kmRate = tariffs.perKmRate;
+    }
+
+    const distanceFee = Math.round(estimatedDistanceKm * kmRate);
     const excessWeight = Math.max(0, parseFloat(weightKg) - allowanceKg);
-    const weightFee = excessWeight * (tariffs.perKgRate || 18.0);
+    const weightFee = Math.round(excessWeight * perKgRate);
     
-    const subtotal = baseFee + distanceFee + weightFee;
+    const subtotal = Math.round(baseFee + distanceFee + weightFee);
     const gstPercent = tariffs.gstPercent || 18.0;
-    const gstTax = subtotal * (gstPercent / 100.0);
-    const totalFare = Math.max(tariffs.minimumFare || 250.0, Math.round(subtotal + gstTax));
+    const gstTax = Math.round(subtotal * (gstPercent / 100.0));
+    const totalFare = Math.max(minFare, subtotal + gstTax);
 
     return res.json({
       success: true,
@@ -102,11 +128,11 @@ exports.calculateQuote = async (req, res, next) => {
         currency: 'INR',
         totalFare: totalFare.toString(),
         breakdown: {
-          baseFee: `₹${baseFee.toFixed(0)}`,
-          distanceRate: `₹${kmRate.toFixed(0)}/km (₹${distanceFee.toFixed(0)})`,
-          weightSurcharge: `₹${weightFee.toFixed(0)} (${excessWeight.toFixed(1)}kg excess)`,
-          gst: `₹${gstTax.toFixed(0)}`,
-          gstTax: `${gstPercent}% GST (₹${gstTax.toFixed(0)})`,
+          baseFee: `₹${Math.round(baseFee)}`,
+          distanceRate: `₹${kmRate.toFixed(0)}/km (₹${distanceFee})`,
+          weightSurcharge: `₹${weightFee} (${excessWeight.toFixed(1)}kg excess)`,
+          gst: `₹${gstTax}`,
+          gstTax: `${gstPercent}% GST (₹${gstTax})`,
         },
       },
     });

@@ -32,33 +32,6 @@ class AdminTopMetricsBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Neon DB & Socket.io Connection Status Pill
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: AdminTheme.statusOnline.withAlpha(20),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AdminTheme.statusOnline),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.circle, color: AdminTheme.statusOnline, size: 8),
-                SizedBox(width: 6),
-                Text(
-                  'NEON POSTGIS • SOCKET.IO V4 LIVE',
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w900,
-                    color: AdminTheme.statusOnline,
-                    letterSpacing: 0.6,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
-
           // Operational Metric Cards (Horizontally Scrollable on smaller viewports)
           Expanded(
             child: SingleChildScrollView(

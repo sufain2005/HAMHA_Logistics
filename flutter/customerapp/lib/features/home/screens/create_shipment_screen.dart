@@ -502,6 +502,13 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
                                 if (currentW > 20.0 || currentW == 0) {
                                   _weightController.text = '2.5';
                                 }
+                                if (_dropoffState != _pickupState) {
+                                  _dropoffState = _pickupState;
+                                  _dropoffCityController.text = 'Navi Mumbai (Vashi Sector 17)';
+                                  _dropoffStreetController.text = 'Palm Beach Road';
+                                  _dropoffBuildingController.text = 'Shreeji Commercial Plaza, Unit 401';
+                                  _dropoffPincodeController.text = '400703';
+                                }
                               }
                             });
                             _calculateQuote();
@@ -1031,7 +1038,22 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
       padding: const EdgeInsets.only(right: 8.0),
       child: InkWell(
         onTap: () {
-          setState(() => _selectedVehicle = type);
+          setState(() {
+            _selectedVehicle = type;
+            if (type == 'bike') {
+              final currentW = double.tryParse(_weightController.text) ?? 0;
+              if (currentW > 20.0 || currentW == 0) {
+                _weightController.text = '2.5';
+              }
+              if (_dropoffState != _pickupState) {
+                _dropoffState = _pickupState;
+                _dropoffCityController.text = 'Navi Mumbai (Vashi Sector 17)';
+                _dropoffStreetController.text = 'Palm Beach Road';
+                _dropoffBuildingController.text = 'Shreeji Commercial Plaza, Unit 401';
+                _dropoffPincodeController.text = '400703';
+              }
+            }
+          });
           _calculateQuote();
         },
         borderRadius: BorderRadius.circular(12),
@@ -1137,6 +1159,29 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
                   _currentQuote?.breakdown['gst'] ??
                   (_currentQuote != null ? '₹${((_currentQuote!.fareAmount * 0.18) / 1.18).round()}' : '₹0'),
             ),
+            if (_selectedVehicle == 'bike' && _distanceKm > 40.0) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withAlpha(25),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.amber.shade700),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 14, color: Colors.amber.shade900),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Note: Bike is ideal for intra-city routes (<40 km). For long corridors, consider Van or Truck for faster highway transit.',
+                        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.amber.shade900),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             if (_selectedOwnerRoute != null) ...[
               const SizedBox(height: 10),
               Container(

@@ -741,7 +741,7 @@ class _PostGisRadiusDispatchModalState extends State<_PostGisRadiusDispatchModal
                 child: Row(
                   children: [
                     const Text(
-                      'NEON POSTGIS RADIUS:',
+                      'DISPATCH SEARCH RADIUS:',
                       style: TextStyle(color: AdminTheme.textMuted, fontSize: 10.5, fontWeight: FontWeight.w900, letterSpacing: 0.6),
                     ),
                     const SizedBox(width: 12),
