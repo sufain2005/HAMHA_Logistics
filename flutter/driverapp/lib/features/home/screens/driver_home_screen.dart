@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/driver_theme.dart';
@@ -28,6 +29,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   Map<String, dynamic>? _activeOrder;
   List<TruckRequirementModel> _ownerBroadcasts = TruckRequirementModel.sampleRequirements('Maharashtra');
   bool _isLoadingBroadcasts = false;
+  StreamSubscription<Map<String, dynamic>>? _requirementSub;
 
   @override
   void initState() {
@@ -36,30 +38,47 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     if (driver != null) {
       _todayEarnings = driver.todayEarnings;
     }
-    _loadDeliveredOrders();
-    _loadActiveOrder();
-    _loadOwnerBroadcasts();
     _initBroadcastSocket();
+    // Parallelize data loading for fast UI startup
+    Future.wait([
+      _loadDeliveredOrders(),
+      _loadActiveOrder(),
+      _loadOwnerBroadcasts(),
+    ]);
   }
 
   void _initBroadcastSocket() {
-    DriverSocketService().socket?.on('truck_requirement:posted', (data) {
-      if (!mounted || data == null) return;
+    void handleNewReq(Map<String, dynamic> data) {
+      if (!mounted) return;
       try {
-        final newReq = TruckRequirementModel.fromJson(Map<String, dynamic>.from(data));
+        final newReq = TruckRequirementModel.fromJson(data);
         setState(() {
           _ownerBroadcasts.removeWhere((r) => r.id == newReq.id);
           _ownerBroadcasts.insert(0, newReq);
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('New Owner Broadcast: ${newReq.title} (Fare: ₹${newReq.offeredFare.toStringAsFixed(0)})'),
+            content: Text('📢 New Owner Load Broadcast: ${newReq.title} (Fare: ₹${newReq.offeredFare.toStringAsFixed(0)})'),
             backgroundColor: DriverTheme.crimsonRed,
             duration: const Duration(seconds: 4),
           ),
         );
       } catch (_) {}
+    }
+
+    DriverSocketService().socket?.on('truck_requirement:posted', (data) {
+      if (data is Map) handleNewReq(Map<String, dynamic>.from(data));
     });
+
+    _requirementSub = DriverSocketService().requirementStream.listen((data) {
+      handleNewReq(data);
+    });
+  }
+
+  @override
+  void dispose() {
+    _requirementSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadOwnerBroadcasts() async {
@@ -1060,47 +1079,16 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
+            const Row(
               children: [
-                const Icon(Icons.campaign_rounded, color: DriverTheme.crimsonRed, size: 22),
-                const SizedBox(width: 8),
-                const Text(
+                Icon(Icons.campaign_rounded, color: DriverTheme.crimsonRed, size: 22),
+                SizedBox(width: 8),
+                Text(
                   'Owner Posted Requirements',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
                     color: DriverTheme.deepBlack,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                  decoration: BoxDecoration(
-                    color: DriverTheme.crimsonRed.withAlpha(20),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: DriverTheme.crimsonRed.withAlpha(80)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: const BoxDecoration(
-                          color: DriverTheme.crimsonRed,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${_ownerBroadcasts.length} ACTIVE',
-                        style: const TextStyle(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w900,
-                          color: DriverTheme.crimsonRed,
-                        ),
-                      ),
-                    ],
                   ),
                 ),
               ],
@@ -1180,10 +1168,37 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               ],
             ),
           )
-        else
+        else ...[
           Column(
             children: _ownerBroadcasts.take(4).map((req) => _buildOwnerBroadcastCard(req)).toList(),
           ),
+          if (_ownerBroadcasts.length > 4)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 8),
+              child: Center(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DriverWorkSearchScreen(initialSelectedState: _currentState),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.travel_explore, size: 16, color: DriverTheme.crimsonRed),
+                  label: Text(
+                    'VIEW ALL ${_ownerBroadcasts.length} LOAD BROADCASTS IN WORK SEARCH',
+                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11.5, color: DriverTheme.crimsonRed),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: DriverTheme.crimsonRed, width: 1.2),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ],
     );
   }

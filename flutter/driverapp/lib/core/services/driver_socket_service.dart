@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../constants/api_constants.dart';
@@ -15,6 +16,12 @@ class DriverSocketService {
   String? _driverId;
   DispatchOfferCallback? _onDispatchOfferCallback;
 
+  final _dispatchOfferStreamController = StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get dispatchOfferStream => _dispatchOfferStreamController.stream;
+
+  final _requirementStreamController = StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get requirementStream => _requirementStreamController.stream;
+
   bool get isConnected => _isConnected;
   IO.Socket? get socket => _socket;
 
@@ -29,7 +36,9 @@ class DriverSocketService {
     DispatchOfferCallback? onDispatchOffer,
   }) {
     _driverId = driverId;
-    _onDispatchOfferCallback = onDispatchOffer;
+    if (onDispatchOffer != null) {
+      _onDispatchOfferCallback = onDispatchOffer;
+    }
 
     try {
       _socket?.disconnect();
@@ -70,22 +79,36 @@ class DriverSocketService {
       // Listen for incoming dispatches from dispatcher & owner
       _socket?.on('dispatch:offer', (data) {
         debugPrint('🚚 [DriverSocket] Incoming Dispatch Offer: $data');
-        if (data is Map<String, dynamic>) {
-          _onDispatchOfferCallback?.call(data);
+        if (data is Map) {
+          final map = Map<String, dynamic>.from(data);
+          _onDispatchOfferCallback?.call(map);
+          _dispatchOfferStreamController.add(map);
         }
       });
 
       _socket?.on('driver:dispatch_request', (data) {
         debugPrint('🚚 [DriverSocket] Incoming Trip Request from Owner: $data');
-        if (data is Map<String, dynamic>) {
-          _onDispatchOfferCallback?.call(data);
+        if (data is Map) {
+          final map = Map<String, dynamic>.from(data);
+          _onDispatchOfferCallback?.call(map);
+          _dispatchOfferStreamController.add(map);
         }
       });
 
       _socket?.on('dispatch:long_delivery_request', (data) {
         debugPrint('🚚 [DriverSocket] Incoming Long Delivery Request: $data');
-        if (data is Map<String, dynamic>) {
-          _onDispatchOfferCallback?.call(data);
+        if (data is Map) {
+          final map = Map<String, dynamic>.from(data);
+          _onDispatchOfferCallback?.call(map);
+          _dispatchOfferStreamController.add(map);
+        }
+      });
+
+      // Listen for owner truck requirements broadcast
+      _socket?.on('truck_requirement:posted', (data) {
+        debugPrint('🚚 [DriverSocket] New Truck Requirement Broadcast: $data');
+        if (data is Map) {
+          _requirementStreamController.add(Map<String, dynamic>.from(data));
         }
       });
 

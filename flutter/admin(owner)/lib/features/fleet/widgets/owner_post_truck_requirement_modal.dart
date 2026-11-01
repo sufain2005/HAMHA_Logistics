@@ -54,8 +54,10 @@ class _OwnerPostTruckRequirementModalState extends State<OwnerPostTruckRequireme
     _loadRequirements();
   }
 
-  Future<void> _loadRequirements() async {
-    setState(() => _isLoadingList = true);
+  Future<void> _loadRequirements({bool showSpinner = true}) async {
+    if (showSpinner && _activeList.isEmpty) {
+      setState(() => _isLoadingList = true);
+    }
     try {
       final list = await AdminApiClient().fetchOwnerTruckRequirements();
       if (mounted) {

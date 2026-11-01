@@ -1126,7 +1126,7 @@ class _RequestLongDeliveryModalState extends State<_RequestLongDeliveryModal> {
 
                       // Target Captain ID input
                       const Text(
-                        'CAPTAIN ID (FORMAT: 202680700001JS / PHONE / UUID)',
+                        'CAPTAIN ID',
                         style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AdminTheme.textMuted, letterSpacing: 0.6),
                       ),
                       const SizedBox(height: 6),
@@ -1135,7 +1135,7 @@ class _RequestLongDeliveryModalState extends State<_RequestLongDeliveryModal> {
                         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
                         decoration: InputDecoration(
                           prefixIcon: const Icon(Icons.badge, size: 18, color: AdminTheme.crimsonRed),
-                          hintText: 'e.g. 202680700001JS, 202698200001V or phone number',
+                          hintText: 'Enter Captain ID or phone number',
                           filled: true,
                           fillColor: AdminTheme.canvasBg,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderSubtle)),
