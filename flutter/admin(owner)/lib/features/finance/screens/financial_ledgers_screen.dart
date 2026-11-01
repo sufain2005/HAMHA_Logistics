@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../core/models/transaction_model.dart';
 import '../../../core/network/admin_api_client.dart';
 import '../../../core/theme/admin_theme.dart';
@@ -804,11 +805,11 @@ class _CustomPdfInvoiceModal extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
 
-                _buildDriverPaymentField('Primary UPI ID / VPA', '9823411209@okhdfcbank', Icons.qr_code_2),
+                _buildDriverPaymentField(ctx, 'Primary UPI ID / VPA', '9823411209@okhdfcbank', Icons.qr_code_2),
                 const SizedBox(height: 8),
-                _buildDriverPaymentField('Bank Name & Account', 'HDFC Bank - 50100489211234', Icons.account_balance),
+                _buildDriverPaymentField(ctx, 'Bank Name & Account', 'HDFC Bank - 50100489211234', Icons.account_balance),
                 const SizedBox(height: 8),
-                _buildDriverPaymentField('Bank IFSC Code', 'HDFC0001242', Icons.pin),
+                _buildDriverPaymentField(ctx, 'Bank IFSC Code', 'HDFC0001242', Icons.pin),
                 const SizedBox(height: 20),
 
                 // Transfer Button
@@ -839,7 +840,7 @@ class _CustomPdfInvoiceModal extends StatelessWidget {
     );
   }
 
-  Widget _buildDriverPaymentField(String label, String value, IconData icon) {
+  Widget _buildDriverPaymentField(BuildContext context, String label, String value, IconData icon) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(

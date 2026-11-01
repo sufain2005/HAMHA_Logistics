@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../core/models/driver_user_model.dart';
 import '../../../core/theme/driver_theme.dart';
 import '../../../core/services/driver_api_service.dart';
 import '../../../core/services/driver_socket_service.dart';
