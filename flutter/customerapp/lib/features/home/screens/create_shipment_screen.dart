@@ -1093,11 +1093,11 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: const [
-                  Icon(Icons.calculate_outlined, color: HamhaTheme.crimsonRed, size: 20),
-                  SizedBox(width: 8),
+                  Icon(Icons.calculate_outlined, color: HamhaTheme.crimsonRed, size: 18),
+                  SizedBox(width: 6),
                   Text(
-                    'TRANSPARENT FREIGHT TARIFF BREAKDOWN',
-                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: HamhaTheme.deepBlack, letterSpacing: 0.4),
+                    'FREIGHT TARIFF BREAKDOWN',
+                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: HamhaTheme.deepBlack, letterSpacing: 0.3),
                   ),
                 ],
               ),

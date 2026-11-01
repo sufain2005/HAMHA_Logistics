@@ -919,7 +919,7 @@ class _RequestLongDeliveryModal extends StatefulWidget {
 
 class _RequestLongDeliveryModalState extends State<_RequestLongDeliveryModal> {
   final _formKey = GlobalKey<FormState>();
-  final _driverIdController = TextEditingController(text: '2ff1fda4-bea5-4e97-bdf4-755a6fc4a2d3');
+  final _driverIdController = TextEditingController(text: '202698200001V');
   final _driverNameController = TextEditingController(text: 'Vikram (MH 12 AB 1234)');
   final _pickupController = TextEditingController(text: 'Bhiwandi Warehousing Hub, Gate 4, Thane');
   final _dropoffController = TextEditingController(text: 'Chakan Industrial Phase II, Pune MIDC');
@@ -1106,14 +1106,19 @@ class _RequestLongDeliveryModalState extends State<_RequestLongDeliveryModal> {
                         runSpacing: 8,
                         children: [
                           _buildPresetChip(
-                            label: 'Vikram (MH 12 AB 1234)',
-                            id: '2ff1fda4-bea5-4e97-bdf4-755a6fc4a2d3',
-                            isSelected: _driverIdController.text == '2ff1fda4-bea5-4e97-bdf4-755a6fc4a2d3',
+                            label: 'Vikram (202698200001V)',
+                            id: '202698200001V',
+                            isSelected: _driverIdController.text == '202698200001V',
                           ),
                           _buildPresetChip(
-                            label: 'Marcus Vance (MH 04 AB 1290)',
-                            id: '6c8159c4-0913-4c72-bc33-27c70375f8f8',
-                            isSelected: _driverIdController.text == '6c8159c4-0913-4c72-bc33-27c70375f8f8',
+                            label: 'Jaykaanth Shikree (202680700001JS)',
+                            id: '202680700001JS',
+                            isSelected: _driverIdController.text == '202680700001JS',
+                          ),
+                          _buildPresetChip(
+                            label: 'Marcus Vance (202698200002MV)',
+                            id: '202698200002MV',
+                            isSelected: _driverIdController.text == '202698200002MV',
                           ),
                         ],
                       ),
@@ -1121,13 +1126,15 @@ class _RequestLongDeliveryModalState extends State<_RequestLongDeliveryModal> {
 
                       // Target Driver ID input
                       const Text(
-                        'DRIVER ID (UUID OR PHONE)',
+                        'DRIVER ID (FORMAT: 202680700001JS / PHONE / UUID)',
                         style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AdminTheme.textMuted, letterSpacing: 0.6),
                       ),
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: _driverIdController,
                         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+                        decoration: InputDecoration(
+                          hintText: 'e.g. 202680700001JS, 202698200001V or phone number',
                         decoration: InputDecoration(
                           prefixIcon: const Icon(Icons.badge, size: 18, color: AdminTheme.crimsonRed),
                           hintText: 'Enter Driver UUID (e.g. 2ff1fda4-bea5-4e97-bdf4-755a6fc4a2d3)',

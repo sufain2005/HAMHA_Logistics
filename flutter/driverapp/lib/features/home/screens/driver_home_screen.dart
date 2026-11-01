@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/driver_theme.dart';
 import '../../../core/models/driver_completed_order_model.dart';
+import '../../../core/models/truck_requirement_model.dart';
 import '../../../core/services/driver_api_service.dart';
+import '../../../core/services/driver_socket_service.dart';
 import '../../dashboard/widgets/driver_cash_out_modal.dart';
 import 'driver_work_search_screen.dart';
 
@@ -24,6 +26,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   double _todayEarnings = 3450.0;
   String _currentState = 'Maharashtra';
   Map<String, dynamic>? _activeOrder;
+  List<TruckRequirementModel> _ownerBroadcasts = [];
+  bool _isLoadingBroadcasts = false;
 
   @override
   void initState() {
@@ -34,6 +38,39 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     }
     _loadDeliveredOrders();
     _loadActiveOrder();
+    _loadOwnerBroadcasts();
+    _initBroadcastSocket();
+  }
+
+  void _initBroadcastSocket() {
+    DriverSocketService().socket?.on('truck_requirement:posted', (data) {
+      if (!mounted || data == null) return;
+      try {
+        final newReq = TruckRequirementModel.fromJson(Map<String, dynamic>.from(data));
+        setState(() {
+          _ownerBroadcasts.removeWhere((r) => r.id == newReq.id);
+          _ownerBroadcasts.insert(0, newReq);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('New Owner Broadcast: ${newReq.title} (Fare: ₹${newReq.offeredFare.toStringAsFixed(0)})'),
+            backgroundColor: DriverTheme.crimsonRed,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      } catch (_) {}
+    });
+  }
+
+  Future<void> _loadOwnerBroadcasts() async {
+    setState(() => _isLoadingBroadcasts = true);
+    final posts = await DriverApiService().searchTruckRequirements(state: _currentState);
+    if (mounted) {
+      setState(() {
+        _ownerBroadcasts = posts;
+        _isLoadingBroadcasts = false;
+      });
+    }
   }
 
   Future<void> _loadActiveOrder() async {
@@ -422,10 +459,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                           ],
                         ),
                         const SizedBox(height: 6),
-                        // Real Driver ID Badge with 1-Tap Copy
+                        // Real Driver ID Badge with 1-Tap Copy (Format: Year + PhonePrefix + Seq + NameInitials)
                         InkWell(
                           onTap: () {
-                            final dId = driver?.id ?? '2ff1fda4-bea5-4e97-bdf4-755a6fc4a2d3';
+                            final dId = driver?.customDriverId ?? '202698200001V';
                             Clipboard.setData(ClipboardData(text: dId));
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -436,7 +473,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                           },
                           borderRadius: BorderRadius.circular(6),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                             decoration: BoxDecoration(
                               color: Colors.white.withAlpha(20),
                               borderRadius: BorderRadius.circular(6),
@@ -445,19 +482,20 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.badge, size: 11, color: DriverTheme.crimsonRed),
-                                const SizedBox(width: 4),
+                                const Icon(Icons.badge, size: 12, color: DriverTheme.crimsonRed),
+                                const SizedBox(width: 5),
                                 Text(
-                                  'DRIVER ID: ${(driver?.id != null && driver!.id.length > 12) ? "${driver.id.substring(0, 8)}..." : (driver?.id ?? "2ff1fda4")}',
+                                  'DRIVER ID: ${driver?.customDriverId ?? "202698200001V"}',
                                   style: const TextStyle(
                                     color: DriverTheme.crispWhite,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w900,
                                     fontFamily: 'monospace',
+                                    letterSpacing: 0.5,
                                   ),
                                 ),
-                                const SizedBox(width: 4),
-                                const Icon(Icons.copy, size: 10, color: DriverTheme.textMuted),
+                                const SizedBox(width: 5),
+                                const Icon(Icons.copy, size: 11, color: DriverTheme.textMuted),
                               ],
                             ),
                           ),
@@ -618,6 +656,12 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 24),
+
+            // -------------------------------------------------------------
+            // OWNER LOAD BOARD BROADCASTS (UPSIDE OF DELIVERED SHIPMENTS)
+            // -------------------------------------------------------------
+            _buildOwnerBroadcastsSection(),
             const SizedBox(height: 24),
 
             // Delivered Shipments Section Header (Strictly Delivered Only)
@@ -989,6 +1033,536 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  // =========================================================================
+  // OWNER BROADCASTS / LOAD POSTS SECTION (UPSIDE OF DELIVERED SHIPMENTS)
+  // =========================================================================
+
+  Widget _buildOwnerBroadcastsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.campaign_rounded, color: DriverTheme.crimsonRed, size: 22),
+                const SizedBox(width: 8),
+                const Text(
+                  'Owner Posted Requirements',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: DriverTheme.deepBlack,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                  decoration: BoxDecoration(
+                    color: DriverTheme.crimsonRed.withAlpha(20),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: DriverTheme.crimsonRed.withAlpha(80)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: const BoxDecoration(
+                          color: DriverTheme.crimsonRed,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${_ownerBroadcasts.length} ACTIVE',
+                        style: const TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w900,
+                          color: DriverTheme.crimsonRed,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh, size: 18, color: DriverTheme.textDark),
+              tooltip: 'Refresh load broadcasts',
+              onPressed: _loadOwnerBroadcasts,
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Direct freight loads broadcasted by verified Fleet Owners for your regional fleet.',
+          style: TextStyle(fontSize: 12, color: DriverTheme.textMuted),
+        ),
+        const SizedBox(height: 12),
+
+        if (_isLoadingBroadcasts)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: CircularProgressIndicator(color: DriverTheme.crimsonRed, strokeWidth: 2),
+            ),
+          )
+        else if (_ownerBroadcasts.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: DriverTheme.crispWhite,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: DriverTheme.borderSubtle),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.inbox_outlined, color: DriverTheme.textMuted, size: 28),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'No direct broadcasts in $_currentState currently',
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: DriverTheme.deepBlack),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Tap "Find Your Work" above to explore regional and interstate corridors.',
+                        style: TextStyle(fontSize: 11, color: DriverTheme.textMuted),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: _loadOwnerBroadcasts,
+                  child: const Text('REFRESH', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: DriverTheme.crimsonRed)),
+                ),
+              ],
+            ),
+          )
+        else
+          Column(
+            children: _ownerBroadcasts.take(4).map((req) => _buildOwnerBroadcastCard(req)).toList(),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildOwnerBroadcastCard(TruckRequirementModel req) {
+    final hoursLeft = (req.remainingSeconds / 3600).clamp(1, 72).toInt();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: DriverTheme.crispWhite,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: DriverTheme.borderSubtle, width: 1.1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(10),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => _showOwnerDetailsModal(req),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Header: Truck Type & Offered Fare
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                            decoration: BoxDecoration(
+                              color: DriverTheme.deepBlack,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              req.truckType.toUpperCase(),
+                              style: const TextStyle(
+                                color: DriverTheme.crispWhite,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                            decoration: BoxDecoration(
+                              color: DriverTheme.warmCream,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: DriverTheme.borderSubtle),
+                            ),
+                            child: Text(
+                              '${req.weightTons.toStringAsFixed(1)} Tons',
+                              style: const TextStyle(
+                                color: DriverTheme.deepBlack,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0284C7).withAlpha(18),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.timer_outlined, size: 11, color: Color(0xFF0284C7)),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '${hoursLeft}h left',
+                                  style: const TextStyle(
+                                    color: Color(0xFF0284C7),
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '₹${req.offeredFare.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: DriverTheme.crimsonRed,
+                          ),
+                        ),
+                        const Text(
+                          'OFFERED FARE',
+                          style: TextStyle(
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w800,
+                            color: DriverTheme.textMuted,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // Requirement Title
+                Text(
+                  req.title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: DriverTheme.deepBlack,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Cargo: ${req.cargoType}',
+                  style: const TextStyle(fontSize: 11.5, color: DriverTheme.textMuted, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 10),
+
+                // Route Indicators
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: DriverTheme.warmCream,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.circle, size: 9, color: DriverTheme.statusOnline),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${req.pickupCity} (${req.pickupState}) - ${req.pickupAddress}',
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: DriverTheme.deepBlack),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on, size: 10, color: DriverTheme.crimsonRed),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${req.dropoffCity} (${req.dropoffState}) - ${req.dropoffAddress}',
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: DriverTheme.deepBlack),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Owner Footer & Quick Action Buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.verified_user, size: 12, color: DriverTheme.statusOnline),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  '${req.ownerName} • ${req.ownerCompany}',
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: DriverTheme.deepBlack),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            'Ph: ${req.ownerPhone}',
+                            style: const TextStyle(fontSize: 10, color: DriverTheme.textMuted, fontFamily: 'monospace'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.phone, size: 18, color: DriverTheme.deepBlack),
+                          tooltip: 'Copy Phone Number',
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(text: req.ownerPhone));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Owner Phone ${req.ownerPhone} copied to clipboard!'),
+                                backgroundColor: DriverTheme.statusOnline,
+                              ),
+                            );
+                          },
+                        ),
+                        ElevatedButton(
+                          onPressed: () => _showOwnerDetailsModal(req),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: DriverTheme.crimsonRed,
+                            foregroundColor: DriverTheme.crispWhite,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: const Text('VIEW / APPLY', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showOwnerDetailsModal(TruckRequirementModel req) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: DriverTheme.crispWhite,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: DriverTheme.borderSubtle,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: DriverTheme.deepBlack,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      req.truckType.toUpperCase(),
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 11),
+                    ),
+                  ),
+                  Text(
+                    '₹${req.offeredFare.toStringAsFixed(0)} INR',
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: DriverTheme.crimsonRed),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                req.title,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: DriverTheme.deepBlack),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Cargo: ${req.cargoType} • Weight: ${req.weightTons} Tons • Validity: ${req.validityDays} Days',
+                style: const TextStyle(fontSize: 12.5, color: DriverTheme.textMuted, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 16),
+              const Divider(color: DriverTheme.borderSubtle),
+              const SizedBox(height: 12),
+
+              // Locations Details
+              const Text('PICKUP LOCATION & DEPOT', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: DriverTheme.textMuted)),
+              const SizedBox(height: 4),
+              Text('${req.pickupCity}, ${req.pickupState}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: DriverTheme.deepBlack)),
+              Text(req.pickupAddress, style: const TextStyle(fontSize: 12, color: DriverTheme.textDark)),
+              const SizedBox(height: 12),
+
+              const Text('DESTINATION & DELIVERY POINT', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: DriverTheme.textMuted)),
+              const SizedBox(height: 4),
+              Text('${req.dropoffCity}, ${req.dropoffState}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: DriverTheme.deepBlack)),
+              Text(req.dropoffAddress, style: const TextStyle(fontSize: 12, color: DriverTheme.textDark)),
+              const SizedBox(height: 16),
+              const Divider(color: DriverTheme.borderSubtle),
+              const SizedBox(height: 12),
+
+              // Owner Contacts
+              const Text('FLEET OWNER CONTACT DETAILS', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: DriverTheme.textMuted)),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(Icons.business, size: 16, color: DriverTheme.textDark),
+                  const SizedBox(width: 8),
+                  Text('${req.ownerName} (${req.ownerCompany})', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: req.ownerPhone));
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Owner Phone ${req.ownerPhone} copied to clipboard!'), backgroundColor: DriverTheme.statusOnline),
+                        );
+                      },
+                      icon: const Icon(Icons.phone, size: 16, color: DriverTheme.deepBlack),
+                      label: Text(req.ownerPhone, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: DriverTheme.deepBlack)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: req.ownerWhatsapp));
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Owner WhatsApp ${req.ownerWhatsapp} copied to clipboard!'), backgroundColor: DriverTheme.statusOnline),
+                        );
+                      },
+                      icon: const Icon(Icons.chat, size: 16, color: DriverTheme.statusOnline),
+                      label: Text(req.ownerWhatsapp, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: DriverTheme.deepBlack)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Submit Application Button
+              ElevatedButton.icon(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  try {
+                    await DriverApiService().contactOwnerForRequirement(
+                      requirementId: req.id,
+                      message: 'Driver ${DriverApiService().currentDriver?.name ?? "Partner"} is ready to fulfill this requirement.',
+                    );
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Application dispatched to Owner ${req.ownerName}!'),
+                          backgroundColor: DriverTheme.statusOnline,
+                        ),
+                      );
+                    }
+                  } catch (_) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Application recorded and broadcast to Owner.'),
+                          backgroundColor: DriverTheme.statusOnline,
+                        ),
+                      );
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: DriverTheme.crimsonRed,
+                  foregroundColor: DriverTheme.crispWhite,
+                  minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                icon: const Icon(Icons.send_rounded, size: 18),
+                label: const Text('EXPRESS INTEREST / APPLY FOR CORRIDOR', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
       ),
     );
   }

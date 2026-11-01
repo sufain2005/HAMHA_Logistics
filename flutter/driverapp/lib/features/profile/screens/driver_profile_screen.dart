@@ -208,7 +208,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                             const SizedBox(height: 2),
                             InkWell(
                               onTap: () {
-                                final dId = driver?.id ?? '2ff1fda4-bea5-4e97-bdf4-755a6fc4a2d3';
+                                final dId = driver?.customDriverId ?? '202698200001V';
                                 Clipboard.setData(ClipboardData(text: dId));
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
@@ -221,10 +221,10 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                               child: Row(
                                 children: [
                                   Text(
-                                    'DRIVER ID: ${driver?.id ?? "2ff1fda4-bea5-4e97-bdf4-755a6fc4a2d3"}',
+                                    'DRIVER ID: ${driver?.customDriverId ?? "202698200001V"}',
                                     style: const TextStyle(
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w800,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w900,
                                       color: DriverTheme.crimsonRed,
                                       letterSpacing: 0.5,
                                       fontFamily: 'monospace',

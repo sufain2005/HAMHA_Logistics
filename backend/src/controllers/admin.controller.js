@@ -217,7 +217,22 @@ exports.requestLongDelivery = async (req, res, next) => {
       if (byUuid.rows.length > 0) resolvedDriver = byUuid.rows[0];
     }
 
-    // 2. Try finding by phone or name
+    // 2. Try finding by custom Driver ID format (e.g. 202680700001JS, 202698200001V)
+    if (!resolvedDriver && cleanDriverInput.length >= 10) {
+      const matchCustom = cleanDriverInput.match(/^(\d{4})(\d{3})(\d{5})([A-Za-z]+)$/);
+      if (matchCustom) {
+        const phonePart = matchCustom[2]; // e.g. '807'
+        const byCustom = await query(
+          `SELECT id, name, phone, role FROM users 
+           WHERE role = 'driver' AND (phone ILIKE $1 OR REPLACE(phone, ' ', '') ILIKE $2)
+           LIMIT 1`,
+          [`%${phonePart}%`, `%${phonePart}%`]
+        );
+        if (byCustom.rows.length > 0) resolvedDriver = byCustom.rows[0];
+      }
+    }
+
+    // 3. Try finding by phone or name
     if (!resolvedDriver) {
       const byPhoneOrName = await query(
         `SELECT id, name, phone, role FROM users 
@@ -953,13 +968,27 @@ exports.postTruckRequirement = async (req, res, next) => {
 
     // Fallback to active registered Admin/Owner in database if unauthenticated/demo
     if (!validOwnerUuid) {
-      const adminLookup = await query("SELECT id, name, company_name, phone FROM users WHERE role = 'admin' LIMIT 1");
-      if (adminLookup.rows.length > 0) {
-        validOwnerUuid = adminLookup.rows[0].id;
-        ownerName = ownerName || adminLookup.rows[0].name;
-        ownerCompany = ownerCompany || adminLookup.rows[0].company_name || 'Singhania National Freight Corp';
-        ownerPhone = ownerPhone || adminLookup.rows[0].phone || '+919820012345';
-      }
+      try {
+        const adminLookup = await query("SELECT id, name, company_name, phone FROM users WHERE role = 'admin' LIMIT 1");
+        if (adminLookup.rows.length > 0) {
+          validOwnerUuid = adminLookup.rows[0].id;
+          ownerName = ownerName || adminLookup.rows[0].name;
+          ownerCompany = ownerCompany || adminLookup.rows[0].company_name || 'Singhania National Freight Corp';
+          ownerPhone = ownerPhone || adminLookup.rows[0].phone || '+919820012345';
+        } else {
+          const createAdmin = await query(
+            `INSERT INTO users (name, email, password, role, company_name, phone)
+             VALUES ('Hamha Commander', 'owner@hamha.com', 'dummy_hash', 'admin', 'Singhania National Freight Corp', '+919820012345')
+             RETURNING id, name, company_name, phone`
+          );
+          if (createAdmin.rows.length > 0) {
+            validOwnerUuid = createAdmin.rows[0].id;
+            ownerName = createAdmin.rows[0].name;
+            ownerCompany = createAdmin.rows[0].company_name;
+            ownerPhone = createAdmin.rows[0].phone;
+          }
+        }
+      } catch (_) {}
     }
     ownerId = validOwnerUuid;
 
