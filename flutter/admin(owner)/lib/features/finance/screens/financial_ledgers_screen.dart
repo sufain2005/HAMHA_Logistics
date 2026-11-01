@@ -513,14 +513,14 @@ void _showDriverPayoutModal(TransactionModel txn) {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('CARRIER PILOT / BENEFICIARY', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: AdminTheme.textMuted, letterSpacing: 0.6)),
+                          const Text('CARRIER PILOT / CAPTAIN', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: AdminTheme.textMuted, letterSpacing: 0.6)),
                           const SizedBox(height: 4),
                           Text(
                             txn.carrierName,
                             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AdminTheme.deepBlack),
                           ),
                           const Text(
-                            'DRIVER ID: 202698200001V',
+                            'CAPTAIN ID: 202698200001V',
                             style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, fontFamily: 'monospace', color: AdminTheme.textDark),
                           ),
                         ],
@@ -551,7 +551,7 @@ void _showDriverPayoutModal(TransactionModel txn) {
 
                 // Driver Verified Bank & UPI Details
                 const Text(
-                  'DRIVER VERIFIED BANK & UPI ACCOUNT DETAILS',
+                  'CAPTAIN VERIFIED BANK & UPI ACCOUNT DETAILS',
                   style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AdminTheme.textMuted, letterSpacing: 0.6),
                 ),
                 const SizedBox(height: 8),

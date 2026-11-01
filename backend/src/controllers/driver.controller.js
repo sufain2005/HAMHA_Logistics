@@ -355,7 +355,7 @@ exports.updateLocation = async (req, res, next) => {
 exports.searchTruckRequirements = async (req, res, next) => {
   try {
     const { state, truckType } = req.query;
-    const targetState = state ? state.trim() : 'Maharashtra';
+    const targetState = state && state !== 'all' ? state.trim() : null;
 
     let sql = `
       SELECT 
@@ -370,22 +370,26 @@ exports.searchTruckRequirements = async (req, res, next) => {
       FROM truck_requirements
       WHERE status = 'active'
         AND expires_at > NOW()
-        AND (pickup_state ILIKE $1 OR dropoff_state ILIKE $1)
     `;
-    const params = [`%${targetState}%`];
+    const params = [];
 
     if (truckType && truckType !== 'all') {
       params.push(truckType);
       sql += ` AND truck_type = $${params.length}`;
     }
 
-    sql += ` ORDER BY expires_at ASC`;
+    if (targetState) {
+      params.push(`%${targetState}%`);
+      sql += ` ORDER BY CASE WHEN (pickup_state ILIKE $${params.length} OR dropoff_state ILIKE $${params.length}) THEN 0 ELSE 1 END, created_at DESC`;
+    } else {
+      sql += ` ORDER BY created_at DESC`;
+    }
 
     const result = await query(sql, params);
 
     return res.json({
       success: true,
-      searchedState: targetState,
+      searchedState: targetState || 'All India',
       count: result.rows.length,
       requirements: result.rows,
     });

@@ -39,7 +39,7 @@ class AdminTopMetricsBar extends StatelessWidget {
               child: Row(
                 children: [
                   _buildQuickMetric(
-                    label: 'ONLINE DRIVERS',
+                    label: 'ONLINE CAPTAINS',
                     value: '18 / 24',
                     icon: Icons.local_shipping,
                     accentColor: AdminTheme.statusOnline,

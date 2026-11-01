@@ -56,12 +56,19 @@ class _OwnerPostTruckRequirementModalState extends State<OwnerPostTruckRequireme
 
   Future<void> _loadRequirements() async {
     setState(() => _isLoadingList = true);
-    final list = await AdminApiClient().fetchOwnerTruckRequirements();
-    if (mounted) {
-      setState(() {
-        _activeList = list;
-        _isLoadingList = false;
-      });
+    try {
+      final list = await AdminApiClient().fetchOwnerTruckRequirements();
+      if (mounted) {
+        setState(() {
+          _activeList = list;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading requirements: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingList = false);
+      }
     }
   }
 
@@ -767,6 +774,9 @@ class _OwnerPostTruckRequirementModalState extends State<OwnerPostTruckRequireme
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
+              setState(() {
+                _activeList.removeWhere((item) => item.id == req.id);
+              });
               final success = await AdminApiClient().cancelTruckRequirement(req.id);
               if (mounted) {
                 _loadRequirements();

@@ -14,6 +14,8 @@ router.get('/owner-profile', optionalAuthenticateJWT, adminController.getOwnerPr
 router.patch('/owner-profile', optionalAuthenticateJWT, adminController.updateOwnerProfile);
 router.get('/vehicles', optionalAuthenticateJWT, adminController.getOwnerVehicles);
 router.post('/vehicles', optionalAuthenticateJWT, adminController.addOwnerVehicle);
+router.put('/vehicles/:id', optionalAuthenticateJWT, adminController.updateOwnerVehicle);
+router.delete('/vehicles/:id', optionalAuthenticateJWT, adminController.deleteOwnerVehicle);
 
 // Dispatch Management & Direct Driver Requests (Seamless fallback for authorized & demo owner sessions)
 router.get('/orders', optionalAuthenticateJWT, adminController.getAllOrders);

@@ -567,7 +567,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                                 Clipboard.setData(ClipboardData(text: dId));
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('Driver ID copied to clipboard: $dId'),
+                                    content: Text('Captain ID copied to clipboard: $dId'),
                                     backgroundColor: DriverTheme.statusOnline,
                                   ),
                                 );
@@ -576,7 +576,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                               child: Row(
                                 children: [
                                   Text(
-                                    'DRIVER ID: ${driver?.customDriverId ?? "202698200001V"}',
+                                    'CAPTAIN ID: ${driver?.customDriverId ?? "202698200001V"}',
                                     style: const TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w900,

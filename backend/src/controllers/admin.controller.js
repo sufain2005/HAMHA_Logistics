@@ -1432,6 +1432,93 @@ exports.addOwnerVehicle = async (req, res, next) => {
   }
 };
 
+/**
+ * OWNER FLEET: Update an existing registered Vehicle
+ */
+exports.updateOwnerVehicle = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const {
+      model,
+      type,
+      tireConfig,
+      tire_config,
+      capacityTons,
+      capacity_tons,
+      rcDocUrl,
+      rc_photo_url,
+      fitnessCert,
+      fitness_cert,
+      insurancePolicy,
+      insurance_policy,
+      permitNumber,
+      permit_number,
+    } = req.body;
+
+    const tons = capacityTons || capacity_tons ? parseFloat(capacityTons || capacity_tons) : null;
+    const tires = tireConfig || tire_config || null;
+    const rc = rcDocUrl || rc_photo_url || null;
+    const fitness = fitnessCert || fitness_cert || null;
+    const insurance = insurancePolicy || insurance_policy || null;
+    const permit = permitNumber || permit_number || null;
+
+    const result = await query(
+      `UPDATE vehicles SET
+        model = COALESCE($2, model),
+        type = COALESCE($3, type),
+        tire_config = COALESCE($4, tire_config),
+        capacity_tons = COALESCE($5, capacity_tons),
+        max_weight_kg = COALESCE($5 * 1000.0, max_weight_kg),
+        rc_photo_url = COALESCE($6, rc_photo_url),
+        fitness_cert = COALESCE($7, fitness_cert),
+        insurance_policy = COALESCE($8, insurance_policy),
+        permit_number = COALESCE($9, permit_number),
+        updated_at = NOW()
+       WHERE id::text = $1 OR UPPER(plate_number) = UPPER($1)
+       RETURNING *`,
+      [id, model, type, tires, tons, rc, fitness, insurance, permit]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Vehicle not found in fleet.' });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Vehicle details updated successfully.',
+      vehicle: result.rows[0],
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * OWNER FLEET: Delete a vehicle from fleet
+ */
+exports.deleteOwnerVehicle = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'Vehicle identifier or plate number required.' });
+    }
+
+    const result = await query(
+      `DELETE FROM vehicles WHERE id::text = $1 OR UPPER(plate_number) = UPPER($1) RETURNING *`,
+      [id.trim()]
+    );
+
+    return res.json({
+      success: true,
+      message: `Vehicle ${id} deleted from fleet successfully.`,
+      deleted: result.rows[0] || null,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 
 
 

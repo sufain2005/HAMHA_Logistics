@@ -100,7 +100,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
       if (res != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Owner Profile & Headquarters updated! Drivers will see these contact details.'),
+            content: Text('Owner Profile & Headquarters updated! Captains will see these contact details.'),
             backgroundColor: AdminTheme.statusOnline,
           ),
         );
@@ -119,7 +119,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
     final driverId = _targetDriverIdController.text.trim();
     if (driverId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please specify a Driver ID or select a preset driver.')),
+        const SnackBar(content: Text('Please specify a Captain ID or select a preset Captain.')),
       );
       return;
     }
@@ -141,8 +141,8 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
       fareAmount: fare,
       distanceKm: 180.0,
       specialInstructions: _dispatchMode == 'only_driver'
-          ? 'Owner vehicle provided. Driver only required for $weightTons Tons cargo.'
-          : 'Vehicle with Driver required for $weightTons Tons cargo.',
+          ? 'Owner vehicle provided. Captain only required for $weightTons Tons cargo.'
+          : 'Vehicle with Captain required for $weightTons Tons cargo.',
     );
 
     if (mounted) {
@@ -150,14 +150,14 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
       if (res != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Trip Request #${res.orderCode} sent to Driver! Real-time notification dispatched.'),
+            content: Text('Trip Request #${res.orderCode} sent to Captain! Real-time notification dispatched.'),
             backgroundColor: AdminTheme.statusOnline,
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Dispatch notification sent to Driver via Socket.io and recorded in ledger.'),
+            content: Text('Dispatch notification sent to Captain via Socket.io and recorded in ledger.'),
             backgroundColor: AdminTheme.deepBlack,
           ),
         );
@@ -288,6 +288,177 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showEditVehicleModal(Map<String, dynamic> v) {
+    final plate = v['plate_number']?.toString() ?? '';
+    final modelCtrl = TextEditingController(text: v['model']?.toString() ?? '');
+    final tonsCtrl = TextEditingController(text: (v['capacity_tons'] ?? 5.0).toString());
+    final rcCtrl = TextEditingController(text: v['rc_photo_url']?.toString() ?? '');
+    final fitnessCtrl = TextEditingController(text: v['fitness_cert']?.toString() ?? '');
+    final insuranceCtrl = TextEditingController(text: v['insurance_policy']?.toString() ?? '');
+    final permitCtrl = TextEditingController(text: v['permit_number']?.toString() ?? '');
+    String vehicleType = v['type']?.toString() ?? 'truck';
+    String tireConfig = v['tire_config']?.toString() ?? '6 Tire';
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          backgroundColor: AdminTheme.crispWhite,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.edit_note, color: AdminTheme.crimsonRed, size: 24),
+              const SizedBox(width: 8),
+              Text('Edit Fleet Vehicle ($plate)', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+            ],
+          ),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('CMVR COMMERCIAL SPECIFICATIONS & CAPACITY', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: AdminTheme.textMuted)),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: modelCtrl,
+                    decoration: const InputDecoration(labelText: 'Vehicle Model & Specification', prefixIcon: Icon(Icons.directions_bus, size: 18)),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: tonsCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(labelText: 'Capacity (in Tons)', suffixText: 'Tons'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          initialValue: tireConfig,
+                          decoration: const InputDecoration(labelText: 'Tire Configuration'),
+                          items: const [
+                            DropdownMenuItem(value: '4 Tire', child: Text('4 Tire (Mini)')),
+                            DropdownMenuItem(value: '6 Tire', child: Text('6 Tire (Medium)')),
+                            DropdownMenuItem(value: '10 Tire', child: Text('10 Tire (Lorry)')),
+                            DropdownMenuItem(value: '12 Tire', child: Text('12 Tire (Heavy)')),
+                            DropdownMenuItem(value: '16 Tire', child: Text('16 Tire (Multi-Axle)')),
+                          ],
+                          onChanged: (val) => setModalState(() => tireConfig = val ?? '6 Tire'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('REQUIRED STATUTORY DOCUMENTS', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: AdminTheme.textMuted)),
+                  const SizedBox(height: 8),
+                  TextField(controller: rcCtrl, decoration: const InputDecoration(labelText: 'RC Smart Card Number')),
+                  const SizedBox(height: 8),
+                  TextField(controller: fitnessCtrl, decoration: const InputDecoration(labelText: 'Vehicle Fitness Certificate')),
+                  const SizedBox(height: 8),
+                  TextField(controller: insuranceCtrl, decoration: const InputDecoration(labelText: 'Commercial Insurance Policy')),
+                  const SizedBox(height: 8),
+                  TextField(controller: permitCtrl, decoration: const InputDecoration(labelText: 'National / State Carrier Permit')),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('CANCEL', style: TextStyle(color: AdminTheme.textMuted)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AdminTheme.crimsonRed),
+              onPressed: isSaving ? null : () async {
+                setModalState(() => isSaving = true);
+                final tons = double.tryParse(tonsCtrl.text.trim()) ?? 5.0;
+                await AdminApiClient().updateOwnerVehicle(
+                  plateNumber: plate,
+                  model: modelCtrl.text.trim(),
+                  type: vehicleType,
+                  tireConfig: tireConfig,
+                  capacityTons: tons,
+                  rcDocUrl: rcCtrl.text.trim(),
+                  fitnessCert: fitnessCtrl.text.trim(),
+                  insurancePolicy: insuranceCtrl.text.trim(),
+                  permitNumber: permitCtrl.text.trim(),
+                );
+
+                if (context.mounted) {
+                  Navigator.pop(dialogCtx);
+                  _loadAllData();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Vehicle $plate specifications updated successfully!'),
+                      backgroundColor: AdminTheme.statusOnline,
+                    ),
+                  );
+                }
+              },
+              child: isSaving
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('SAVE CHANGES', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteVehicle(Map<String, dynamic> v) {
+    final plate = v['plate_number']?.toString() ?? 'Vehicle';
+    final model = v['model']?.toString() ?? 'Commercial Lorry';
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: AdminTheme.crispWhite,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: AdminTheme.crimsonRed, size: 24),
+            const SizedBox(width: 8),
+            Text('Remove $plate from Fleet?', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to remove $plate ($model) from your registered commercial fleet?\nCaptains will no longer be assigned this vehicle.',
+          style: const TextStyle(fontSize: 13, color: AdminTheme.deepBlack),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('KEEP VEHICLE', style: TextStyle(color: AdminTheme.textMuted)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AdminTheme.crimsonRed),
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              setState(() {
+                _vehicles.removeWhere((item) => (item['plate_number'] == plate || item['id'] == v['id']));
+              });
+              await AdminApiClient().deleteOwnerVehicle(v['id']?.toString() ?? plate);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Vehicle $plate removed from fleet registry.'),
+                    backgroundColor: AdminTheme.deepBlack,
+                  ),
+                );
+              }
+            },
+            child: const Text('CONFIRM DELETE', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
@@ -459,10 +630,10 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
             ),
             const SizedBox(height: 24),
 
-            // SECTION 3: REQUEST FOR DRIVER (ONLY DRIVER vs VEHICLE WITH DRIVER)
+            // SECTION 3: REQUEST FOR CAPTAIN (ONLY CAPTAIN vs VEHICLE WITH CAPTAIN)
             _buildSectionCard(
-              title: 'Request for Driver Dispatch (Direct Consignment)',
-              subtitle: 'Select between using your own fleet lorry (Only Driver) or requiring a driver with their own vehicle.',
+              title: 'Request for Captain Dispatch (Direct Consignment)',
+              subtitle: 'Select between using your own fleet lorry (Only Captain) or requiring a Captain with their own vehicle.',
               icon: Icons.add_road,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -492,9 +663,9 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: const [
-                                      Text('OPTION 1: ONLY DRIVER OPTION', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+                                      Text('OPTION 1: ONLY CAPTAIN OPTION', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
                                       SizedBox(height: 2),
-                                      Text('Owner provides own fleet lorry; requests a driver to drive it.', style: TextStyle(fontSize: 11, color: AdminTheme.textMuted)),
+                                      Text('Owner provides own fleet lorry; requests a Captain to drive it.', style: TextStyle(fontSize: 11, color: AdminTheme.textMuted)),
                                     ],
                                   ),
                                 ),
@@ -526,9 +697,9 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: const [
-                                      Text('OPTION 2: VEHICLE WITH DRIVER', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+                                      Text('OPTION 2: VEHICLE WITH CAPTAIN', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
                                       SizedBox(height: 2),
-                                      Text('Driver brings their own commercial vehicle for luggage with tonnage.', style: TextStyle(fontSize: 11, color: AdminTheme.textMuted)),
+                                      Text('Captain brings their own commercial vehicle for luggage with tonnage.', style: TextStyle(fontSize: 11, color: AdminTheme.textMuted)),
                                     ],
                                   ),
                                 ),
@@ -541,10 +712,10 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // If Only Driver: select owner's vehicle
+                  // If Only Captain: select owner's vehicle
                   if (_dispatchMode == 'only_driver' && _vehicles.isNotEmpty) ...[
                     DropdownButtonFormField<String>(
-                      value: _selectedOwnerVehicleId,
+                      initialValue: _selectedOwnerVehicleId,
                       decoration: const InputDecoration(
                         labelText: 'Select Lorry from Your Registered Fleet',
                         prefixIcon: Icon(Icons.local_shipping, size: 18),
@@ -595,16 +766,16 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Driver Target Selection
+                  // Captain Target Selection
                   Row(
                     children: [
                       Expanded(
                         child: TextField(
                           controller: _targetDriverIdController,
                           decoration: const InputDecoration(
-                            labelText: 'Target Driver ID (UUID or Phone)',
+                            labelText: 'Target Captain ID (UUID, Phone or e.g. 202680700001JS)',
                             prefixIcon: Icon(Icons.badge, size: 18),
-                            helperText: 'Driver will receive a real-time dispatch notification',
+                            helperText: 'Captain will receive a real-time dispatch notification',
                           ),
                         ),
                       ),
@@ -665,7 +836,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                       icon: const Icon(Icons.send_rounded, size: 20),
                       label: _isDispatching
                           ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Text('DISPATCH TRIP REQUEST TO DRIVER (SEND NOTIFICATION)', style: TextStyle(fontWeight: FontWeight.w900)),
+                          : const Text('DISPATCH TRIP REQUEST TO CAPTAIN (SEND NOTIFICATION)', style: TextStyle(fontWeight: FontWeight.w900)),
                     ),
                   ),
                 ],
@@ -762,14 +933,35 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(plate, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AdminTheme.deepBlack)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AdminTheme.crimsonTint,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: AdminTheme.crimsonRed.withAlpha(60)),
-                ),
-                child: Text('$tons Tons • $tires', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AdminTheme.crimsonRed)),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AdminTheme.crimsonTint,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AdminTheme.crimsonRed.withAlpha(60)),
+                    ),
+                    child: Text('$tons Tons • $tires', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AdminTheme.crimsonRed)),
+                  ),
+                  const SizedBox(width: 6),
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, size: 17, color: AdminTheme.deepBlack),
+                    tooltip: 'Edit Vehicle Details',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+                    onPressed: () => _showEditVehicleModal(v),
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, size: 17, color: AdminTheme.crimsonRed),
+                    tooltip: 'Delete Vehicle from Fleet',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+                    onPressed: () => _confirmDeleteVehicle(v),
+                  ),
+                ],
               ),
             ],
           ),

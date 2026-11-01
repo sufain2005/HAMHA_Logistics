@@ -1372,6 +1372,61 @@ class AdminApiClient {
     }
     return null;
   }
+
+  Future<bool> deleteOwnerVehicle(String plateOrId) async {
+    try {
+      final response = await http
+          .delete(
+            Uri.parse('${AdminConstants.baseUrl}/admin/vehicles/$plateOrId'),
+            headers: _headers,
+          )
+          .timeout(const Duration(seconds: 4));
+
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } catch (e) {
+      debugPrint('⚠️ [Admin API] Error deleting fleet vehicle: $e');
+      return true; // Optimistic removal
+    }
+  }
+
+  Future<Map<String, dynamic>?> updateOwnerVehicle({
+    required String plateNumber,
+    required String model,
+    required String type,
+    required String tireConfig,
+    required double capacityTons,
+    String? rcDocUrl,
+    String? fitnessCert,
+    String? insurancePolicy,
+    String? permitNumber,
+  }) async {
+    try {
+      final response = await http
+          .put(
+            Uri.parse('${AdminConstants.baseUrl}/admin/vehicles/$plateNumber'),
+            headers: _headers,
+            body: jsonEncode({
+              'model': model.trim(),
+              'type': type,
+              'tireConfig': tireConfig,
+              'capacityTons': capacityTons,
+              'rcDocUrl': rcDocUrl?.trim(),
+              'fitnessCert': fitnessCert?.trim(),
+              'insurancePolicy': insurancePolicy?.trim(),
+              'permitNumber': permitNumber?.trim(),
+            }),
+          )
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        return data['vehicle'] as Map<String, dynamic>?;
+      }
+    } catch (e) {
+      debugPrint('⚠️ [Admin API] Error updating fleet vehicle: $e');
+    }
+    return null;
+  }
 }
 
 

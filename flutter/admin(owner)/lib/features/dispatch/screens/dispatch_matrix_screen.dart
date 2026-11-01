@@ -172,7 +172,7 @@ class _DispatchMatrixScreenState extends State<DispatchMatrixScreen> {
                         elevation: 2,
                       ),
                       icon: const Icon(Icons.add_road, size: 16),
-                      label: const Text('+ Request Long Delivery by Driver ID', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
+                      label: const Text('+ Request Long Delivery by Captain ID', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
                     ),
                   ],
                 ),
@@ -989,7 +989,7 @@ class _RequestLongDeliveryModalState extends State<_RequestLongDeliveryModal> {
       } else {
         setState(() {
           _isSubmitting = false;
-          _errorMessage = 'Failed to dispatch long delivery to driver ID. Please verify driver ID and database connection.';
+          _errorMessage = 'Failed to dispatch long delivery to Captain ID. Please verify Captain ID and database connection.';
         });
       }
     }
@@ -1040,7 +1040,7 @@ class _RequestLongDeliveryModalState extends State<_RequestLongDeliveryModal> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: const [
                         Text(
-                          'Request Long Delivery by Driver ID',
+                          'Request Long Delivery by Captain ID',
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w900,
@@ -1049,7 +1049,7 @@ class _RequestLongDeliveryModalState extends State<_RequestLongDeliveryModal> {
                         ),
                         SizedBox(height: 3),
                         Text(
-                          'Direct owner consignment dispatch to registered carrier driver with real-time Neon DB sync.',
+                          'Direct owner consignment dispatch to registered carrier Captain with real-time Neon DB sync.',
                           style: TextStyle(fontSize: 12, color: AdminTheme.textMuted),
                         ),
                       ],
@@ -1124,9 +1124,9 @@ class _RequestLongDeliveryModalState extends State<_RequestLongDeliveryModal> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Target Driver ID input
+                      // Target Captain ID input
                       const Text(
-                        'DRIVER ID (FORMAT: 202680700001JS / PHONE / UUID)',
+                        'CAPTAIN ID (FORMAT: 202680700001JS / PHONE / UUID)',
                         style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AdminTheme.textMuted, letterSpacing: 0.6),
                       ),
                       const SizedBox(height: 6),
@@ -1141,7 +1141,7 @@ class _RequestLongDeliveryModalState extends State<_RequestLongDeliveryModal> {
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AdminTheme.borderSubtle)),
                         ),
                         validator: (val) {
-                          if (val == null || val.trim().isEmpty) return 'Please enter Driver ID';
+                          if (val == null || val.trim().isEmpty) return 'Please enter Captain ID';
                           return null;
                         },
                       ),

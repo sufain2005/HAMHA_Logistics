@@ -64,12 +64,24 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
   Future<void> _loadOwnerBroadcasts() async {
     setState(() => _isLoadingBroadcasts = true);
-    final posts = await DriverApiService().searchTruckRequirements(state: _currentState);
-    if (mounted) {
-      setState(() {
-        _ownerBroadcasts = posts.isNotEmpty ? posts : TruckRequirementModel.sampleRequirements(_currentState);
-        _isLoadingBroadcasts = false;
-      });
+    try {
+      final posts = await DriverApiService().searchTruckRequirements(state: _currentState);
+      if (mounted) {
+        setState(() {
+          _ownerBroadcasts = posts.isNotEmpty ? posts : TruckRequirementModel.sampleRequirements(_currentState);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading broadcasts: $e');
+      if (mounted) {
+        setState(() {
+          _ownerBroadcasts = TruckRequirementModel.sampleRequirements(_currentState);
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingBroadcasts = false);
+      }
     }
   }
 
@@ -402,7 +414,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                           children: [
                             Flexible(
                               child: Text(
-                                'Welcome back, ${driver?.name.split(' ').first ?? 'Rajesh'}!',
+                                'Welcome back, Captain ${driver?.name.split(' ').first ?? 'Rajesh'}!',
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   color: DriverTheme.crispWhite,
@@ -466,7 +478,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                             Clipboard.setData(ClipboardData(text: dId));
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Driver ID copied: $dId (Share with Owner)'),
+                                content: Text('Captain ID copied: $dId (Share with Owner)'),
                                 backgroundColor: DriverTheme.statusOnline,
                               ),
                             );
@@ -485,7 +497,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                                 const Icon(Icons.badge, size: 12, color: DriverTheme.crimsonRed),
                                 const SizedBox(width: 5),
                                 Text(
-                                  'DRIVER ID: ${driver?.customDriverId ?? "202698200001V"}',
+                                  'CAPTAIN ID: ${driver?.customDriverId ?? "202698200001V"}',
                                   style: const TextStyle(
                                     color: DriverTheme.crispWhite,
                                     fontSize: 10.5,
@@ -1094,9 +1106,28 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               ],
             ),
             IconButton(
-              icon: const Icon(Icons.refresh, size: 18, color: DriverTheme.textDark),
+              icon: _isLoadingBroadcasts
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: DriverTheme.crimsonRed),
+                    )
+                  : const Icon(Icons.refresh, size: 20, color: DriverTheme.textDark),
               tooltip: 'Refresh load broadcasts',
-              onPressed: _loadOwnerBroadcasts,
+              onPressed: _isLoadingBroadcasts
+                  ? null
+                  : () async {
+                      await _loadOwnerBroadcasts();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Load board refreshed: ${_ownerBroadcasts.length} owner broadcasts available!'),
+                            backgroundColor: DriverTheme.statusOnline,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
             ),
           ],
         ),
