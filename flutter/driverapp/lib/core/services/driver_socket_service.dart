@@ -16,6 +16,11 @@ class DriverSocketService {
   DispatchOfferCallback? _onDispatchOfferCallback;
 
   bool get isConnected => _isConnected;
+  IO.Socket? get socket => _socket;
+
+  void on(String event, dynamic Function(dynamic) handler) {
+    _socket?.on(event, handler);
+  }
 
   void initialize({
     required String driverId,
