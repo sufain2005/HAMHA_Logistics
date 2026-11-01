@@ -75,8 +75,11 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
         _gstinController.text = profile['gstin'] ?? '27AAAAA0000A1Z5';
 
         _vehicles = vehicles;
-        if (_vehicles.isNotEmpty && _selectedOwnerVehicleId == null) {
-          _selectedOwnerVehicleId = _vehicles.first['id']?.toString() ?? _vehicles.first['plate_number']?.toString();
+        final availableIds = _vehicles.map((v) => v['id']?.toString() ?? v['plate_number']?.toString()).toSet();
+        if (_selectedOwnerVehicleId == null || !availableIds.contains(_selectedOwnerVehicleId)) {
+          _selectedOwnerVehicleId = _vehicles.isNotEmpty
+              ? (_vehicles.first['id']?.toString() ?? _vehicles.first['plate_number']?.toString())
+              : null;
         }
         _isLoading = false;
       });
@@ -343,7 +346,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: DropdownButtonFormField<String>(
-                          initialValue: tireConfig,
+                          value: const ['4 Tire', '6 Tire', '10 Tire', '12 Tire', '16 Tire'].contains(tireConfig) ? tireConfig : '6 Tire',
                           decoration: const InputDecoration(labelText: 'Tire Configuration'),
                           items: const [
                             DropdownMenuItem(value: '4 Tire', child: Text('4 Tire (Mini)')),
@@ -444,7 +447,13 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
             onPressed: () async {
               Navigator.pop(dialogCtx);
               setState(() {
-                _vehicles.removeWhere((item) => (item['plate_number'] == plate || item['id'] == v['id']));
+                _vehicles.removeWhere((item) => (item['plate_number'] == plate || item['id']?.toString() == v['id']?.toString()));
+                final remainingIds = _vehicles.map((item) => item['id']?.toString() ?? item['plate_number']?.toString()).toSet();
+                if (_selectedOwnerVehicleId == null || !remainingIds.contains(_selectedOwnerVehicleId)) {
+                  _selectedOwnerVehicleId = _vehicles.isNotEmpty
+                      ? (_vehicles.first['id']?.toString() ?? _vehicles.first['plate_number']?.toString())
+                      : null;
+                }
               });
               await AdminApiClient().deleteOwnerVehicle(v['id']?.toString() ?? plate);
               if (mounted) {
@@ -714,23 +723,41 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
 
                   // If Only Captain: select owner's vehicle
                   if (_dispatchMode == 'only_driver' && _vehicles.isNotEmpty) ...[
-                    DropdownButtonFormField<String>(
-                      initialValue: _selectedOwnerVehicleId,
-                      decoration: const InputDecoration(
-                        labelText: 'Select Lorry from Your Registered Fleet',
-                        prefixIcon: Icon(Icons.local_shipping, size: 18),
-                      ),
-                      items: _vehicles.map((v) {
-                        final plate = v['plate_number'] ?? 'MH-04-TR-9081';
-                        final model = v['model'] ?? 'Eicher Pro';
-                        final tons = v['capacity_tons'] ?? 5.0;
-                        final val = v['id']?.toString() ?? plate;
-                        return DropdownMenuItem<String>(
-                          value: val,
-                          child: Text('$plate • $model (${tons}T Capacity)'),
+                    Builder(
+                      builder: (context) {
+                        final seenValues = <String>{};
+                        final menuItems = <DropdownMenuItem<String>>[];
+
+                        for (final v in _vehicles) {
+                          final plate = v['plate_number']?.toString() ?? 'MH-04-TR-9081';
+                          final model = v['model']?.toString() ?? 'Eicher Pro';
+                          final tons = v['capacity_tons'] ?? 5.0;
+                          final val = v['id']?.toString() ?? plate;
+                          if (val.isNotEmpty && seenValues.add(val)) {
+                            menuItems.add(
+                              DropdownMenuItem<String>(
+                                value: val,
+                                child: Text('$plate • $model (${tons}T Capacity)'),
+                              ),
+                            );
+                          }
+                        }
+
+                        final currentVal = seenValues.contains(_selectedOwnerVehicleId)
+                            ? _selectedOwnerVehicleId
+                            : (seenValues.isNotEmpty ? seenValues.first : null);
+
+                        return DropdownButtonFormField<String>(
+                          key: ValueKey('owner_vehicle_dropdown_${currentVal}_${menuItems.length}'),
+                          value: currentVal,
+                          decoration: const InputDecoration(
+                            labelText: 'Select Lorry from Your Registered Fleet',
+                            prefixIcon: Icon(Icons.local_shipping, size: 18),
+                          ),
+                          items: menuItems,
+                          onChanged: (val) => setState(() => _selectedOwnerVehicleId = val),
                         );
-                      }).toList(),
-                      onChanged: (val) => setState(() => _selectedOwnerVehicleId = val),
+                      },
                     ),
                     const SizedBox(height: 16),
                   ],
