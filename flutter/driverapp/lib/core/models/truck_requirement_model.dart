@@ -54,35 +54,49 @@ class TruckRequirementModel {
   });
 
   factory TruckRequirementModel.fromJson(Map<String, dynamic> json) {
-    final posted = json['posted_at'] != null ? DateTime.tryParse(json['posted_at']) ?? DateTime.now() : DateTime.now();
-    final expires = json['expires_at'] != null ? DateTime.tryParse(json['expires_at']) ?? posted.add(const Duration(days: 3)) : posted.add(const Duration(days: 3));
-    final remSecs = (json['remaining_seconds'] as num?)?.toInt() ?? expires.difference(DateTime.now()).inSeconds;
+    double parseDouble(dynamic val, double fallback) {
+      if (val == null) return fallback;
+      if (val is num) return val.toDouble();
+      return double.tryParse(val.toString()) ?? fallback;
+    }
+
+    int parseInt(dynamic val, int fallback) {
+      if (val == null) return fallback;
+      if (val is num) return val.toInt();
+      return int.tryParse(val.toString()) ?? fallback;
+    }
+
+    final postedRaw = json['posted_at']?.toString();
+    final expiresRaw = json['expires_at']?.toString();
+    final posted = postedRaw != null ? DateTime.tryParse(postedRaw) ?? DateTime.now() : DateTime.now();
+    final expires = expiresRaw != null ? DateTime.tryParse(expiresRaw) ?? posted.add(const Duration(days: 3)) : posted.add(const Duration(days: 3));
+    final remSecs = parseInt(json['remaining_seconds'], expires.difference(DateTime.now()).inSeconds);
 
     return TruckRequirementModel(
       id: json['id']?.toString() ?? '',
       ownerId: json['owner_id']?.toString() ?? '',
-      ownerName: json['owner_name'] ?? 'Fleet Owner',
-      ownerCompany: json['owner_company'] ?? 'HAMHA Logistics Partner',
-      ownerPhone: json['owner_phone'] ?? '+919820012345',
-      ownerWhatsapp: json['owner_whatsapp'] ?? json['owner_phone'] ?? '+919820012345',
-      truckType: json['truck_type'] ?? 'box_truck',
-      title: json['title'] ?? 'Truck Required for Freight Consignment',
-      cargoType: json['cargo_type'] ?? 'General Cargo',
-      weightTons: (json['weight_tons'] as num?)?.toDouble() ?? 5.0,
-      pickupState: json['pickup_state'] ?? 'Maharashtra',
-      pickupCity: json['pickup_city'] ?? 'Mumbai',
-      pickupAddress: json['pickup_address'] ?? 'Pickup Logistics Depot',
-      dropoffState: json['dropoff_state'] ?? 'Maharashtra',
-      dropoffCity: json['dropoff_city'] ?? 'Pune',
-      dropoffAddress: json['dropoff_address'] ?? 'Dropoff Warehouse Hub',
-      offeredFare: (json['offered_fare'] as num?)?.toDouble() ?? 15000.0,
-      currency: json['currency'] ?? 'INR',
-      distanceKm: (json['distance_km'] as num?)?.toDouble() ?? 150.0,
-      validityDays: (json['validity_days'] as num?)?.toInt() ?? 3,
+      ownerName: json['owner_name']?.toString() ?? 'Fleet Owner',
+      ownerCompany: json['owner_company']?.toString() ?? 'HAMHA Logistics Partner',
+      ownerPhone: json['owner_phone']?.toString() ?? '+919820012345',
+      ownerWhatsapp: json['owner_whatsapp']?.toString() ?? json['owner_phone']?.toString() ?? '+919820012345',
+      truckType: json['truck_type']?.toString() ?? 'box_truck',
+      title: json['title']?.toString() ?? 'Truck Required for Freight Consignment',
+      cargoType: json['cargo_type']?.toString() ?? 'General Cargo',
+      weightTons: parseDouble(json['weight_tons'], 5.0),
+      pickupState: json['pickup_state']?.toString() ?? 'Maharashtra',
+      pickupCity: json['pickup_city']?.toString() ?? 'Mumbai',
+      pickupAddress: json['pickup_address']?.toString() ?? 'Pickup Logistics Depot',
+      dropoffState: json['dropoff_state']?.toString() ?? 'Maharashtra',
+      dropoffCity: json['dropoff_city']?.toString() ?? 'Pune',
+      dropoffAddress: json['dropoff_address']?.toString() ?? 'Dropoff Warehouse Hub',
+      offeredFare: parseDouble(json['offered_fare'], 15000.0),
+      currency: json['currency']?.toString() ?? 'INR',
+      distanceKm: parseDouble(json['distance_km'], 150.0),
+      validityDays: parseInt(json['validity_days'], 3),
       postedAt: posted,
       expiresAt: expires,
       remainingSeconds: remSecs > 0 ? remSecs : 0,
-      status: json['status'] ?? 'active',
+      status: json['status']?.toString() ?? 'active',
     );
   }
 

@@ -21,9 +21,29 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
   Map<String, dynamic>? _fleetOwner;
   bool _isLoadingOwner = true;
 
+  // Vehicle Specifications State
+  late String _vehicleType;
+  late String _plateNumber;
+  late String _vehicleModel;
+  String _payloadCapacity = '1,200 kg • 180 cu ft';
+  String _fastagId = 'FAST-8839210-ICICI';
+  String _pucValidity = 'Valid till 15 Dec 2027';
+
+  // Bank & UPI Settlement State
+  String _upiId = '9823411209@okhdfcbank';
+  String _bankName = 'HDFC Bank';
+  String _accountNumber = '•••• 4892';
+  String _fullAccountNumber = '50100489211234';
+  String _ifscCode = 'HDFC0001242';
+  String _accountHolder = 'Vikram S.';
+
   @override
   void initState() {
     super.initState();
+    final driver = DriverApiService().currentDriver;
+    _vehicleType = driver?.vehicleType ?? 'Truck';
+    _plateNumber = driver?.plateNumber ?? 'MH 12 AB 1234';
+    _vehicleModel = driver?.vehicleModel ?? 'Tata Ace Gold 1.5T';
     _loadFleetOwner();
   }
 
@@ -68,6 +88,340 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
             child: const Text('SIGN OUT', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showEditVehicleModal() {
+    String selectedClass = _vehicleType;
+    final plateCtrl = TextEditingController(text: _plateNumber);
+    final modelCtrl = TextEditingController(text: _vehicleModel);
+    final capacityCtrl = TextEditingController(text: _payloadCapacity);
+    final fastagCtrl = TextEditingController(text: _fastagId);
+    final pucCtrl = TextEditingController(text: _pucValidity);
+    final formKey = GlobalKey<FormState>();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (modalCtx, setModalState) => Container(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(modalCtx).viewInsets.bottom + 24,
+          ),
+          decoration: const BoxDecoration(
+            color: DriverTheme.crispWhite,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: DriverTheme.borderSubtle,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: const [
+                      Icon(Icons.local_shipping, color: DriverTheme.crimsonRed, size: 22),
+                      SizedBox(width: 8),
+                      Text(
+                        'Update Vehicle & Asset Details',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: DriverTheme.deepBlack),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Update your commercial fleet vehicle specifications visible to Fleet Owners.',
+                    style: TextStyle(fontSize: 12, color: DriverTheme.textMuted),
+                  ),
+                  const SizedBox(height: 18),
+
+                  DropdownButtonFormField<String>(
+                    value: ['Truck', 'Box Truck', 'Van', 'Pickup', 'Trailer', 'Bike'].contains(selectedClass)
+                        ? selectedClass
+                        : 'Truck',
+                    decoration: const InputDecoration(labelText: 'Vehicle Fleet Class'),
+                    items: const [
+                      DropdownMenuItem(value: 'Truck', child: Text('Standard Truck (Heavy Commercial)')),
+                      DropdownMenuItem(value: 'Box Truck', child: Text('10-Ton Box Truck (Closed Body)')),
+                      DropdownMenuItem(value: 'Van', child: Text('Cargo Van / Tempo (LCV)')),
+                      DropdownMenuItem(value: 'Pickup', child: Text('Pickup Truck / Open Body')),
+                      DropdownMenuItem(value: 'Trailer', child: Text('Heavy Prime Mover / Trailer')),
+                      DropdownMenuItem(value: 'Bike', child: Text('Motorcycle / 2-Wheeler (Express Parcel)')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) setModalState(() => selectedClass = val);
+                    },
+                  ),
+                  const SizedBox(height: 14),
+
+                  TextFormField(
+                    controller: plateCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Registration Plate Number',
+                      hintText: 'e.g. MH 12 AB 1234',
+                      prefixIcon: Icon(Icons.badge, color: DriverTheme.textDark),
+                    ),
+                    validator: (val) => (val == null || val.trim().isEmpty) ? 'Please enter plate number' : null,
+                  ),
+                  const SizedBox(height: 14),
+
+                  TextFormField(
+                    controller: modelCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Vehicle Make & Model',
+                      hintText: 'e.g. Tata Ace Gold 1.5T / Ashok Leyland 1616',
+                      prefixIcon: Icon(Icons.directions_car, color: DriverTheme.textDark),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  TextFormField(
+                    controller: capacityCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Payload Capacity & Volume',
+                      hintText: 'e.g. 1,200 kg • 180 cu ft or 10.0 Tons',
+                      prefixIcon: Icon(Icons.scale, color: DriverTheme.textDark),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  TextFormField(
+                    controller: fastagCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'FASTag Toll Account / Tag ID',
+                      hintText: 'e.g. FAST-8839210-ICICI',
+                      prefixIcon: Icon(Icons.toll, color: DriverTheme.textDark),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  ElevatedButton(
+                    onPressed: () {
+                      if (!formKey.currentState!.validate()) return;
+                      setState(() {
+                        _vehicleType = selectedClass;
+                        _plateNumber = plateCtrl.text.trim().toUpperCase();
+                        _vehicleModel = modelCtrl.text.trim().isNotEmpty ? modelCtrl.text.trim() : 'Commercial Asset';
+                        _payloadCapacity = capacityCtrl.text.trim().isNotEmpty ? capacityCtrl.text.trim() : 'Standard Payload';
+                        _fastagId = fastagCtrl.text.trim().isNotEmpty ? fastagCtrl.text.trim() : 'FAST-ACTIVE';
+                        _pucValidity = pucCtrl.text.trim().isNotEmpty ? pucCtrl.text.trim() : 'Valid';
+                      });
+
+                      // Update DriverApiService currentDriver model
+                      final current = DriverApiService().currentDriver;
+                      if (current != null) {
+                        DriverApiService().currentDriver = DriverUserModel(
+                          id: current.id,
+                          name: current.name,
+                          phone: current.phone,
+                          email: current.email,
+                          vehicleType: _vehicleType,
+                          plateNumber: _plateNumber,
+                          vehicleModel: _vehicleModel,
+                          isVerified: current.isVerified,
+                          isOnline: current.isOnline,
+                          isOnboarded: current.isOnboarded,
+                          rating: current.rating,
+                          todayEarnings: current.todayEarnings,
+                          todayTrips: current.todayTrips,
+                          onlineHours: current.onlineHours,
+                        );
+                      }
+
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Vehicle specifications updated successfully!'),
+                          backgroundColor: DriverTheme.statusOnline,
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: DriverTheme.crimsonRed,
+                      foregroundColor: DriverTheme.crispWhite,
+                      minimumSize: const Size.fromHeight(50),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: const Text('SAVE VEHICLE SPECIFICATIONS', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showEditBankModal() {
+    final holderCtrl = TextEditingController(text: _accountHolder);
+    final upiCtrl = TextEditingController(text: _upiId);
+    final bankCtrl = TextEditingController(text: _bankName);
+    final accountCtrl = TextEditingController(text: _fullAccountNumber);
+    final ifscCtrl = TextEditingController(text: _ifscCode);
+    final formKey = GlobalKey<FormState>();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (modalCtx, setModalState) => Container(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(modalCtx).viewInsets.bottom + 24,
+          ),
+          decoration: const BoxDecoration(
+            color: DriverTheme.crispWhite,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: DriverTheme.borderSubtle,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: const [
+                      Icon(Icons.account_balance, color: DriverTheme.crimsonRed, size: 22),
+                      SizedBox(width: 8),
+                      Text(
+                        'Edit Bank & UPI Payout Details',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: DriverTheme.deepBlack),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Fleet Owners will use these exact details to transfer your corridor freight payments.',
+                    style: TextStyle(fontSize: 12, color: DriverTheme.textMuted),
+                  ),
+                  const SizedBox(height: 18),
+
+                  TextFormField(
+                    controller: holderCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Account Holder Name',
+                      hintText: 'e.g. Vikram Sharma',
+                      prefixIcon: Icon(Icons.person_outline, color: DriverTheme.textDark),
+                    ),
+                    validator: (val) => (val == null || val.trim().isEmpty) ? 'Please enter account holder name' : null,
+                  ),
+                  const SizedBox(height: 14),
+
+                  TextFormField(
+                    controller: upiCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Primary UPI ID / VPA',
+                      hintText: 'e.g. 9823411209@okhdfcbank or driver@upi',
+                      prefixIcon: Icon(Icons.qr_code_2, color: DriverTheme.crimsonRed),
+                    ),
+                    validator: (val) => (val == null || !val.contains('@')) ? 'Please enter a valid UPI ID (e.g. user@bank)' : null,
+                  ),
+                  const SizedBox(height: 14),
+
+                  TextFormField(
+                    controller: bankCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Bank Name',
+                      hintText: 'e.g. HDFC Bank, SBI, ICICI Bank',
+                      prefixIcon: Icon(Icons.account_balance, color: DriverTheme.textDark),
+                    ),
+                    validator: (val) => (val == null || val.trim().isEmpty) ? 'Please enter bank name' : null,
+                  ),
+                  const SizedBox(height: 14),
+
+                  TextFormField(
+                    controller: accountCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Full Bank Account Number',
+                      hintText: 'e.g. 50100489211234',
+                      prefixIcon: Icon(Icons.credit_card, color: DriverTheme.textDark),
+                    ),
+                    validator: (val) => (val == null || val.trim().length < 8) ? 'Enter valid account number (min 8 digits)' : null,
+                  ),
+                  const SizedBox(height: 14),
+
+                  TextFormField(
+                    controller: ifscCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Bank IFSC Code',
+                      hintText: 'e.g. HDFC0001242',
+                      prefixIcon: Icon(Icons.pin, color: DriverTheme.textDark),
+                    ),
+                    validator: (val) => (val == null || val.trim().length < 5) ? 'Enter valid IFSC code' : null,
+                  ),
+                  const SizedBox(height: 20),
+
+                  ElevatedButton(
+                    onPressed: () {
+                      if (!formKey.currentState!.validate()) return;
+                      final rawAcc = accountCtrl.text.trim();
+                      final masked = rawAcc.length >= 4 ? '•••• ${rawAcc.substring(rawAcc.length - 4)}' : rawAcc;
+                      setState(() {
+                        _accountHolder = holderCtrl.text.trim();
+                        _upiId = upiCtrl.text.trim();
+                        _bankName = bankCtrl.text.trim();
+                        _fullAccountNumber = rawAcc;
+                        _accountNumber = masked;
+                        _ifscCode = ifscCtrl.text.trim().toUpperCase();
+                      });
+
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Bank & UPI payout settings saved!'),
+                          backgroundColor: DriverTheme.statusOnline,
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: DriverTheme.crimsonRed,
+                      foregroundColor: DriverTheme.crispWhite,
+                      minimumSize: const Size.fromHeight(50),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: const Text('SAVE BANK & UPI DETAILS', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -289,15 +643,15 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                   const Divider(color: DriverTheme.borderSubtle, height: 1),
                   const SizedBox(height: 16),
 
-                  // Lifetime stats
+                  // Lifetime stats (Fresh Driver Profile)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildLifetimeStat('LIFETIME EARNINGS', '₹1,48,650'),
+                      _buildLifetimeStat('LIFETIME EARNINGS', '₹0'),
                       Container(width: 1, height: 30, color: DriverTheme.borderSubtle),
-                      _buildLifetimeStat('TOTAL DELIVERIES', '428 Trips'),
+                      _buildLifetimeStat('TOTAL DELIVERIES', '0 Trips'),
                       Container(width: 1, height: 30, color: DriverTheme.borderSubtle),
-                      _buildLifetimeStat('SAFETY SCORE', '99/100'),
+                      _buildLifetimeStat('SAFETY SCORE', '100/100'),
                     ],
                   ),
                 ],
@@ -544,7 +898,32 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
             const SizedBox(height: 20),
 
             // 3. VEHICLE & FLEET ASSET SPECIFICATIONS
-            _buildSectionHeader('Assigned Vehicle & Telematics', Icons.local_shipping),
+            _buildSectionHeader(
+              'Assigned Vehicle & Telematics',
+              Icons.local_shipping,
+              trailing: InkWell(
+                onTap: _showEditVehicleModal,
+                borderRadius: BorderRadius.circular(6),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  child: Row(
+                    children: const [
+                      Icon(Icons.edit, size: 12, color: DriverTheme.crimsonRed),
+                      SizedBox(width: 4),
+                      Text(
+                        'EDIT / ADD VEHICLE',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: DriverTheme.crimsonRed,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -554,17 +933,17 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
               ),
               child: Column(
                 children: [
-                  _buildProfileRow('Asset Category', '${driver?.vehicleType ?? 'Van'} (Light Commercial)'),
+                  _buildProfileRow('Asset Category', '$_vehicleType (Commercial Fleet)'),
                   const Divider(color: DriverTheme.borderSubtle, height: 20),
-                  _buildProfileRow('Registration Plate', driver?.plateNumber ?? 'MH 12 AB 1234', isBold: true),
+                  _buildProfileRow('Registration Plate', _plateNumber, isBold: true),
                   const Divider(color: DriverTheme.borderSubtle, height: 20),
-                  _buildProfileRow('Vehicle Make & Model', driver?.vehicleModel ?? 'Tata Ace Gold 1.5T'),
+                  _buildProfileRow('Vehicle Make & Model', _vehicleModel),
                   const Divider(color: DriverTheme.borderSubtle, height: 20),
-                  _buildProfileRow('Payload & Volume Capacity', '1,200 kg • 180 cu ft'),
+                  _buildProfileRow('Payload & Volume Capacity', _payloadCapacity),
                   const Divider(color: DriverTheme.borderSubtle, height: 20),
-                  _buildProfileRow('FASTag Electronic Toll', 'FAST-8839210-ICICI (Active)', badge: '₹1,450'),
+                  _buildProfileRow('FASTag Electronic Toll', '$_fastagId (Active)', badge: '₹1,450'),
                   const Divider(color: DriverTheme.borderSubtle, height: 20),
-                  _buildProfileRow('Pollution Clearance (PUC)', 'Valid till 15 Dec 2027', badge: 'PASSED'),
+                  _buildProfileRow('Pollution Clearance (PUC)', _pucValidity, badge: 'PASSED'),
                 ],
               ),
             ),
@@ -583,7 +962,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                 children: [
                   _buildDocRow('Commercial Driver License (CDL)', 'MH-042019003841', 'VERIFIED'),
                   const Divider(color: DriverTheme.borderSubtle, height: 18),
-                  _buildDocRow('Vehicle RC Smart Card', 'MH12AB1234', 'VERIFIED'),
+                  _buildDocRow('Vehicle RC Smart Card', _plateNumber.replaceAll(' ', ''), 'VERIFIED'),
                   const Divider(color: DriverTheme.borderSubtle, height: 18),
                   _buildDocRow('Cargo & Transit Insurance', 'ICICI Lombard Policy #8841-B', 'ACTIVE'),
                   const Divider(color: DriverTheme.borderSubtle, height: 18),
@@ -594,7 +973,32 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
             const SizedBox(height: 20),
 
             // 4. BANK & INSTANT PAYOUT SETTINGS
-            _buildSectionHeader('Bank & Instant Payout Settings', Icons.account_balance),
+            _buildSectionHeader(
+              'Bank & Instant Payout Settings',
+              Icons.account_balance,
+              trailing: InkWell(
+                onTap: _showEditBankModal,
+                borderRadius: BorderRadius.circular(6),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  child: Row(
+                    children: const [
+                      Icon(Icons.edit, size: 12, color: DriverTheme.crimsonRed),
+                      SizedBox(width: 4),
+                      Text(
+                        'EDIT BANK & UPI',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: DriverTheme.crimsonRed,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -604,11 +1008,11 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
               ),
               child: Column(
                 children: [
-                  _buildProfileRow('Primary UPI ID', '9823411209@okhdfcbank', badge: 'DEFAULT'),
+                  _buildProfileRow('Primary UPI ID', _upiId, badge: 'DEFAULT'),
                   const Divider(color: DriverTheme.borderSubtle, height: 20),
-                  _buildProfileRow('Direct Salary Bank Account', 'HDFC Bank •••• 4892'),
+                  _buildProfileRow('Direct Salary Bank Account', '$_bankName $_accountNumber'),
                   const Divider(color: DriverTheme.borderSubtle, height: 20),
-                  _buildProfileRow('Bank IFSC Code', 'HDFC0001242'),
+                  _buildProfileRow('Bank IFSC Code', _ifscCode),
                   const Divider(color: DriverTheme.borderSubtle, height: 20),
                   _buildSwitchRow(
                     'Daily Instant Auto-Settlement',
@@ -740,22 +1144,28 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon) {
+  Widget _buildSectionHeader(String title, IconData icon, {Widget? trailing}) {
     return Padding(
       padding: const EdgeInsets.only(left: 4.0, bottom: 8.0),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(icon, size: 16, color: DriverTheme.crimsonRed),
-          const SizedBox(width: 8),
-          Text(
-            title.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
-              color: DriverTheme.textMuted,
-              letterSpacing: 0.8,
-            ),
+          Row(
+            children: [
+              Icon(icon, size: 16, color: DriverTheme.crimsonRed),
+              const SizedBox(width: 8),
+              Text(
+                title.toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  color: DriverTheme.textMuted,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
           ),
+          if (trailing != null) trailing,
         ],
       ),
     );

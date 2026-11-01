@@ -352,18 +352,35 @@ class _FinancialLedgersScreenState extends State<FinancialLedgersScreen> {
                                       Text(txn.paymentMethod, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
                                     ),
 
-                                    // Action: Download PDF Invoice
+                                    // Action: Download PDF Invoice & Pay Carrier
                                     DataCell(
-                                      ElevatedButton.icon(
-                                        onPressed: () => _showPdfInvoiceModal(txn),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: AdminTheme.crimsonRed,
-                                          foregroundColor: AdminTheme.crispWhite,
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                        ),
-                                        icon: const Icon(Icons.picture_as_pdf, size: 14),
-                                        label: const Text('Download Invoice', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          ElevatedButton.icon(
+                                            onPressed: () => _showPdfInvoiceModal(txn),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: AdminTheme.deepBlack,
+                                              foregroundColor: AdminTheme.crispWhite,
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                            ),
+                                            icon: const Icon(Icons.picture_as_pdf, size: 13),
+                                            label: const Text('Invoice', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900)),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          ElevatedButton.icon(
+                                            onPressed: () => _showDriverPayoutModal(txn),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: AdminTheme.crimsonRed,
+                                              foregroundColor: AdminTheme.crispWhite,
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                            ),
+                                            icon: const Icon(Icons.account_balance, size: 13),
+                                            label: const Text('Pay Carrier / Bank Details', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900)),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
@@ -668,6 +685,194 @@ class _CustomPdfInvoiceModal extends StatelessWidget {
         children: [
           Text(label, style: TextStyle(fontSize: 11, fontWeight: isBold ? FontWeight.w900 : FontWeight.w600, color: AdminTheme.textMuted)),
           Text(value, style: TextStyle(fontSize: isBold ? 13 : 11.5, fontWeight: FontWeight.w900, color: color ?? AdminTheme.deepBlack)),
+        ],
+      ),
+    );
+  }
+
+  void _showDriverPayoutModal(TransactionModel txn) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: AdminTheme.crispWhite,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: AdminTheme.borderSubtle),
+        ),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 580),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AdminTheme.crimsonRed.withAlpha(20),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.account_balance, color: AdminTheme.crimsonRed, size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Carrier Freight Settlement',
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AdminTheme.deepBlack),
+                            ),
+                            Text(
+                              'Consignment #${txn.orderCode} • SAC 996511',
+                              style: const TextStyle(fontSize: 11, color: AdminTheme.textMuted),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: AdminTheme.textMuted),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                const Divider(color: AdminTheme.borderSubtle, height: 1),
+                const SizedBox(height: 18),
+
+                // Driver & Amount Card
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AdminTheme.canvasBg,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AdminTheme.borderSubtle),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('CARRIER PILOT / BENEFICIARY', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: AdminTheme.textMuted, letterSpacing: 0.6)),
+                          const SizedBox(height: 4),
+                          Text(
+                            txn.carrierName,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AdminTheme.deepBlack),
+                          ),
+                          const Text(
+                            'DRIVER ID: 202698200001V',
+                            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, fontFamily: 'monospace', color: AdminTheme.textDark),
+                          ),
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text('CARRIER NET PAYOUT (85%)', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: AdminTheme.textMuted, letterSpacing: 0.6)),
+                          const SizedBox(height: 4),
+                          Text(
+                            '₹${txn.carrierPayout.toStringAsFixed(2)} INR',
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AdminTheme.statusOnline),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AdminTheme.statusOnline.withAlpha(20),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text('CLEARED FOR IMPS', style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w900, color: AdminTheme.statusOnline)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Driver Verified Bank & UPI Details
+                const Text(
+                  'DRIVER VERIFIED BANK & UPI ACCOUNT DETAILS',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AdminTheme.textMuted, letterSpacing: 0.6),
+                ),
+                const SizedBox(height: 8),
+
+                _buildDriverPaymentField('Primary UPI ID / VPA', '9823411209@okhdfcbank', Icons.qr_code_2),
+                const SizedBox(height: 8),
+                _buildDriverPaymentField('Bank Name & Account', 'HDFC Bank - 50100489211234', Icons.account_balance),
+                const SizedBox(height: 8),
+                _buildDriverPaymentField('Bank IFSC Code', 'HDFC0001242', Icons.pin),
+                const SizedBox(height: 20),
+
+                // Transfer Button
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Payment of ₹${txn.carrierPayout.toStringAsFixed(0)} INR successfully transferred to ${txn.carrierName} (UPI: 9823411209@okhdfcbank)!'),
+                        backgroundColor: AdminTheme.statusOnline,
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AdminTheme.crimsonRed,
+                    foregroundColor: AdminTheme.crispWhite,
+                    minimumSize: const Size.fromHeight(48),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: const Icon(Icons.send_rounded, size: 16),
+                  label: const Text('CONFIRM PAYMENT TRANSFER DISPATCH', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDriverPaymentField(String label, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AdminTheme.crispWhite,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AdminTheme.borderSubtle),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: AdminTheme.crimsonRed),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: AdminTheme.textMuted)),
+                  Text(value, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w900, color: AdminTheme.deepBlack)),
+                ],
+              ),
+            ],
+          ),
+          IconButton(
+            icon: const Icon(Icons.copy, size: 16, color: AdminTheme.textMuted),
+            tooltip: 'Copy $label',
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: value));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('$label copied to clipboard!'), backgroundColor: AdminTheme.statusOnline),
+              );
+            },
+          ),
         ],
       ),
     );

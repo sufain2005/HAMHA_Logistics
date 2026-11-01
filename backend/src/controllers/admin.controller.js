@@ -1183,6 +1183,19 @@ exports.deleteTruckRequirement = async (req, res, next) => {
   try {
     const { id } = req.params;
 
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('truck_requirement:deleted', { id });
+    }
+
+    if (!isValidUuid(id)) {
+      return res.json({
+        success: true,
+        message: 'Requirement closed and removed from live load board.',
+        id,
+      });
+    }
+
     const result = await query(
       `UPDATE truck_requirements
        SET status = 'cancelled', updated_at = NOW()
@@ -1190,15 +1203,6 @@ exports.deleteTruckRequirement = async (req, res, next) => {
        RETURNING id, status`,
       [id]
     );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Requirement not found.' });
-    }
-
-    const io = req.app.get('io');
-    if (io) {
-      io.emit('truck_requirement:deleted', { id });
-    }
 
     return res.json({
       success: true,

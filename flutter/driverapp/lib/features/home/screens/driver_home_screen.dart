@@ -26,7 +26,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   double _todayEarnings = 3450.0;
   String _currentState = 'Maharashtra';
   Map<String, dynamic>? _activeOrder;
-  List<TruckRequirementModel> _ownerBroadcasts = [];
+  List<TruckRequirementModel> _ownerBroadcasts = TruckRequirementModel.sampleRequirements('Maharashtra');
   bool _isLoadingBroadcasts = false;
 
   @override
@@ -1341,15 +1341,16 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
+                    Flexible(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(Icons.verified_user, size: 12, color: DriverTheme.statusOnline),
                               const SizedBox(width: 4),
-                              Expanded(
+                              Flexible(
                                 child: Text(
                                   '${req.ownerName} • ${req.ownerCompany}',
                                   style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: DriverTheme.deepBlack),
@@ -1358,6 +1359,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                               ),
                             ],
                           ),
+                          const SizedBox(height: 2),
                           Text(
                             'Ph: ${req.ownerPhone}',
                             style: const TextStyle(fontSize: 10, color: DriverTheme.textMuted, fontFamily: 'monospace'),
@@ -1365,7 +1367,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                         ],
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
                           icon: const Icon(Icons.phone, size: 18, color: DriverTheme.deepBlack),

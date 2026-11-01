@@ -333,18 +333,19 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> with SingleTick
     );
   }
 
-  // Moving Animated Highway Truck Banner
+  // Modern Premium Freight Network Banner (Clean, no road dashes or PostGIS tags)
   Widget _buildMovingLogisticsBanner() {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
         color: HamhaTheme.deepBlack,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: HamhaTheme.crimsonRed.withAlpha(50), width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(20),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withAlpha(35),
+            blurRadius: 16,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -352,92 +353,103 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> with SingleTick
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Pulsing live radar beacon
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withAlpha(25),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.verified, color: Color(0xFF10B981), size: 14),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'HAMHA EXPRESS FREIGHT NETWORK',
+                    style: TextStyle(
+                      color: HamhaTheme.crispWhite,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ],
+              ),
               Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF10B981),
-                  shape: BoxShape.circle,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: HamhaTheme.crimsonRed.withAlpha(30),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: HamhaTheme.crimsonRed.withAlpha(80)),
                 ),
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                'LIVE FLEET CORRIDOR TELEMATICS ACTIVE',
-                style: TextStyle(
-                  color: Color(0xFF10B981),
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.6,
+                child: const Text(
+                  'PAN-INDIA ACTIVE',
+                  style: TextStyle(
+                    color: HamhaTheme.crimsonRed,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5,
+                  ),
                 ),
-              ),
-              const Spacer(),
-              const Text(
-                'PostGIS GPS V4',
-                style: TextStyle(color: Colors.white54, fontSize: 9.5, fontWeight: FontWeight.w700),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-
-          // Highway Track with static HAMHA 24/7 indicator (Stationary, non-moving)
-          SizedBox(
-            height: 38,
-            child: Stack(
-              alignment: Alignment.centerLeft,
-              children: [
-                // Dotted road dashes
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 6,
-                  child: Row(
-                    children: List.generate(
-                      20,
-                      (i) => Expanded(
-                        child: Container(
-                          height: 2,
-                          margin: const EdgeInsets.symmetric(horizontal: 2),
-                          color: (i % 2 == 0) ? Colors.white30 : Colors.transparent,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Stationary Transport Van / Truck Badge
-                Positioned(
-                  left: 16,
-                  bottom: 2,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: HamhaTheme.crimsonRed,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.local_shipping, color: Colors.white, size: 14),
-                            SizedBox(width: 4),
-                            Text('HAMHA 24/7', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900)),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.flash_on, color: Color(0xFFF59E0B), size: 12),
-                    ],
-                  ),
-                ),
-              ],
+          const SizedBox(height: 12),
+          const Text(
+            'Full-Truckload, Part-Load & City Parcel Delivery',
+            style: TextStyle(
+              color: HamhaTheme.crispWhite,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.2,
             ),
           ),
+          const SizedBox(height: 4),
           const Text(
-            '10,400+ Verified Carriers running across Indian National Highways with automated dispatch.',
-            style: TextStyle(color: Colors.white70, fontSize: 10.5),
+            'Direct factory-to-hub highway dispatches, vetted commercial carriers, and end-to-end transparent pricing.',
+            style: TextStyle(
+              color: HamhaTheme.textMuted,
+              fontSize: 11.5,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              _buildFeatureBadge(Icons.bolt, 'Instant Dispatch', const Color(0xFFF59E0B)),
+              _buildFeatureBadge(Icons.security, 'Transit Insurance Included', const Color(0xFF10B981)),
+              _buildFeatureBadge(Icons.navigation_outlined, 'Live GPS Status', const Color(0xFF38BDF8)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeatureBadge(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white.withAlpha(20)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
