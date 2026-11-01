@@ -93,6 +93,31 @@ class FleetDriverModel {
     }
   }
 
+  String get state {
+    final d = district.toLowerCase();
+    final p = (pickupAddress ?? '').toLowerCase();
+    final dr = (dropoffAddress ?? '').toLowerCase();
+    final combined = '$d $p $dr';
+    if (combined.contains('karnataka') || combined.contains('bengaluru') || combined.contains('bangalore')) {
+      return 'Karnataka';
+    }
+    if (combined.contains('tamil nadu') || combined.contains('chennai')) {
+      return 'Tamil Nadu';
+    }
+    if (combined.contains('gujarat') || combined.contains('ahmedabad') || combined.contains('surat')) {
+      return 'Gujarat';
+    }
+    if (combined.contains('telangana') || combined.contains('hyderabad')) {
+      return 'Telangana';
+    }
+    if (combined.contains('delhi')) {
+      return 'Delhi NCR';
+    }
+    return 'Maharashtra';
+  }
+
+  String get presentDistrict => district.isNotEmpty ? district : 'Thane District';
+
   FleetDriverModel copyWith({
     String? id,
     String? name,

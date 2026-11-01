@@ -361,13 +361,47 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Welcome back, ${driver?.name.split(' ').first ?? 'Rajesh'}!',
-                          style: const TextStyle(
-                            color: DriverTheme.crispWhite,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w900,
-                          ),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                'Welcome back, ${driver?.name.split(' ').first ?? 'Rajesh'}!',
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: DriverTheme.crispWhite,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            if (driver?.isVerified == true) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: DriverTheme.statusOnline.withAlpha(35),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: DriverTheme.statusOnline, width: 1.2),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.verified, size: 12, color: DriverTheme.statusOnline),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'VERIFIED',
+                                      style: TextStyle(
+                                        color: DriverTheme.statusOnline,
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                         const SizedBox(height: 4),
                         Row(
@@ -431,23 +465,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                       ],
                     ),
                   ),
-                  ElevatedButton(
-                    onPressed: widget.onGoToTracking,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: DriverTheme.crimsonRed,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      minimumSize: Size.zero,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.navigation, size: 14, color: DriverTheme.crispWhite),
-                        SizedBox(width: 6),
-                        Text('GO LIVE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -476,69 +493,32 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        "Today's Shift Earnings",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          color: DriverTheme.deepBlack,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: DriverTheme.statusOnline.withAlpha(20),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: DriverTheme.statusOnline),
-                        ),
-                        child: const Text(
-                          'IMPS ELIGIBLE',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            color: DriverTheme.statusOnline,
-                          ),
-                        ),
-                      ),
-                    ],
+                  const Text(
+                    "Today's Shift Earnings",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: DriverTheme.deepBlack,
+                    ),
                   ),
                   const SizedBox(height: 12),
 
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'CLEARED BALANCE',
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: DriverTheme.textMuted, letterSpacing: 0.6),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '₹${_todayEarnings.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.w900,
-                              color: DriverTheme.crimsonRed,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ],
+                      const Text(
+                        'CLEARED BALANCE',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: DriverTheme.textMuted, letterSpacing: 0.6),
                       ),
-                      ElevatedButton(
-                        onPressed: _todayEarnings > 0 ? _openCashOutModal : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: DriverTheme.crimsonRed,
-                          foregroundColor: DriverTheme.crispWhite,
-                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                          minimumSize: Size.zero,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      const SizedBox(height: 4),
+                      Text(
+                        '₹${_todayEarnings.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          color: DriverTheme.crimsonRed,
+                          letterSpacing: 0.3,
                         ),
-                        child: const Text('CASH OUT', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
                       ),
                     ],
                   ),
@@ -590,101 +570,50 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: DriverTheme.crimsonRed.withAlpha(40),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Icons.travel_explore, color: DriverTheme.crimsonLight, size: 20),
-                          ),
-                          const SizedBox(width: 10),
-                          const Text(
-                            'Search for Work',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              color: DriverTheme.crispWhite,
-                            ),
-                          ),
-                        ],
-                      ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: DriverTheme.crimsonRed,
-                          borderRadius: BorderRadius.circular(8),
+                          color: DriverTheme.crimsonRed.withAlpha(40),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Text(
-                          '3-DAY POSTINGS',
-                          style: TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w900,
-                            color: DriverTheme.crispWhite,
-                            letterSpacing: 0.5,
-                          ),
+                        child: const Icon(Icons.travel_explore, color: DriverTheme.crimsonLight, size: 20),
+                      ),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'Search for Work',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: DriverTheme.crispWhite,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Direct Fleet Owners are actively searching for trucks in your state with 3-day load broadcasts.',
+                    'Direct Fleet Owners are actively searching for trucks in your region with verified load broadcasts.',
                     style: TextStyle(fontSize: 12.5, color: Color(0xFFCBD5E1), height: 1.4),
                   ),
                   const SizedBox(height: 16),
 
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0F172A),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFF334155)),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DriverWorkSearchScreen(initialSelectedState: _currentState),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.location_on, size: 14, color: DriverTheme.crimsonRed),
-                            const SizedBox(width: 4),
-                            Text(
-                              _currentState,
-                              style: const TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w800,
-                                color: DriverTheme.crispWhite,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => DriverWorkSearchScreen(initialSelectedState: _currentState),
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: DriverTheme.crimsonRed,
-                            foregroundColor: DriverTheme.crispWhite,
-                            padding: const EdgeInsets.symmetric(vertical: 13),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          icon: const Icon(Icons.search, size: 16),
-                          label: const Text('FIND WORK IN STATE', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
-                        ),
-                      ),
-                    ],
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: DriverTheme.crimsonRed,
+                      foregroundColor: DriverTheme.crispWhite,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.search, size: 18),
+                    label: const Text('FIND YOUR WORK', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.5)),
                   ),
                 ],
               ),

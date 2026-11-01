@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/driver_theme.dart';
 import '../../../core/services/driver_api_service.dart';
+import '../../../core/models/driver_user_model.dart';
 import '../../dashboard/screens/driver_main_shell.dart';
 
 class DriverDocumentUploadScreen extends StatefulWidget {
@@ -66,7 +67,35 @@ class _DriverDocumentUploadScreenState extends State<DriverDocumentUploadScreen>
     try {
       await Future.delayed(const Duration(milliseconds: 600));
 
+      // Mark driver verified upon uploading all compliance details
+      final current = DriverApiService().currentDriver;
+      if (current != null) {
+        DriverApiService().currentDriver = DriverUserModel(
+          id: current.id,
+          name: current.name,
+          phone: current.phone,
+          email: current.email,
+          isVerified: true,
+          isOnline: current.isOnline,
+          isOnboarded: true,
+          vehicleType: current.vehicleType,
+          plateNumber: current.plateNumber,
+          vehicleModel: current.vehicleModel,
+          rating: current.rating,
+          todayEarnings: current.todayEarnings,
+          todayTrips: current.todayTrips,
+          onlineHours: current.onlineHours,
+        );
+      }
+
       if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('All details submitted and verified! Your driver account is now VERIFIED.'),
+          backgroundColor: DriverTheme.statusOnline,
+          duration: Duration(seconds: 3),
+        ),
+      );
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const DriverMainShell()),

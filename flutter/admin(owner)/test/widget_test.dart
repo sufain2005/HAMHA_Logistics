@@ -101,7 +101,7 @@ void main() {
     expect(find.text('Fleet Control Tower'), findsOneWidget);
     expect(find.text('Dispatch Matrix'), findsOneWidget);
     expect(find.text('Onboarding Approvals'), findsOneWidget);
-    expect(find.text('FLEET OWNER (ROOT)'), findsOneWidget);
+    expect(find.text('OWNER'), findsOneWidget);
 
     // Top Metrics
     expect(find.text('NEON POSTGIS • SOCKET.IO V4 LIVE'), findsOneWidget);

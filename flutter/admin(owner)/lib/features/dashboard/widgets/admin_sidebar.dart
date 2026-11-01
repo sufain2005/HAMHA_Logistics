@@ -61,7 +61,7 @@ class AdminSidebar extends StatelessWidget {
                       Icon(Icons.shield_outlined, color: AdminTheme.crimsonRed, size: 11),
                       SizedBox(width: 5),
                       Text(
-                        'OWNER PANEL • ROOT',
+                        'OWNER PANEL',
                         style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.w800,

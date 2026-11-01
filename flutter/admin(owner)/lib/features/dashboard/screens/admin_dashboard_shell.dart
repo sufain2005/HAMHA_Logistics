@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../core/theme/admin_theme.dart';
@@ -51,7 +52,8 @@ class _AdminDashboardShellState extends State<AdminDashboardShell> {
   FleetDriverModel? _selectedDriver;
   bool _isLoading = true;
 
-  // Map Controls State
+  // Map & Location Controls State
+  bool _showMapTileView = false;
   bool _showGeofences = true;
   bool _showAllRoutes = true;
   bool _isDarkMap = true;
@@ -248,7 +250,11 @@ class _AdminDashboardShellState extends State<AdminDashboardShell> {
       _selectedDriver = driver;
       _isRouteVisibleForSelected = true;
     });
-    _mapController.move(driver.location, 14.5);
+    try {
+      if (_showMapTileView) {
+        _mapController.move(driver.location, 14.5);
+      }
+    } catch (_) {}
   }
 
   void _openPostTruckRequirementModal() {
@@ -617,9 +623,746 @@ class _AdminDashboardShellState extends State<AdminDashboardShell> {
   }
 
   // ==========================================
-  // RIGHT PANE: INTERACTIVE FULLSCREEN MAPBOX
+  // RIGHT PANE: DRIVER REGIONAL LOCATION & TELEMATICS (WITH OPTIONAL TILE MAP)
   // ==========================================
   Widget _buildMapPane() {
+    if (_showMapTileView) {
+      return _buildMapTileEnginePane();
+    }
+    return _buildDriverLocationAndDistrictPane();
+  }
+
+  Widget _buildDriverLocationAndDistrictPane() {
+    final driver = _selectedDriver;
+
+    return Container(
+      color: const Color(0xFF0F172A), // Slate 900 High-Tech Radar Theme
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Pane Top Bar with status & toggle
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            decoration: const BoxDecoration(
+              color: Color(0xFF1E293B),
+              border: Border(bottom: BorderSide(color: Color(0xFF334155))),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: AdminTheme.crimsonRed.withAlpha(40),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.explore_rounded, color: AdminTheme.crimsonLight, size: 18),
+                    ),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Driver Live Location & Regional Status',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        Text(
+                          driver != null
+                              ? '${driver.name} • ${driver.state} (${driver.presentDistrict})'
+                              : 'Select any driver from the roster to inspect live State & Present District',
+                          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    // Socket Live Indicator
+                    ValueListenableBuilder<bool>(
+                      valueListenable: _socketService.isConnected,
+                      builder: (context, connected, _) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F172A),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: connected ? AdminTheme.statusOnline : const Color(0xFF475569)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 7,
+                                height: 7,
+                                decoration: BoxDecoration(
+                                  color: connected ? AdminTheme.statusOnline : Colors.grey,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                connected ? 'SOCKET.IO LIVE' : 'SYNCING',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                  color: connected ? AdminTheme.statusOnline : Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 10),
+                    // Button to toggle Map View if needed
+                    OutlinedButton.icon(
+                      onPressed: () => setState(() => _showMapTileView = true),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFCBD5E1),
+                        side: const BorderSide(color: Color(0xFF475569)),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      icon: const Icon(Icons.map_outlined, size: 14),
+                      label: const Text('TILE MAP', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Main Pane Content
+          Expanded(
+            child: driver != null
+                ? _buildSelectedDriverDetailView(driver)
+                : _buildNoDriverSelectedOverview(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectedDriverDetailView(FleetDriverModel driver) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 1. PRIMARY HIGHLIGHT: STATE & PRESENT DISTRICT HERO CARD
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AdminTheme.crimsonRed.withAlpha(120), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(80),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AdminTheme.crimsonRed,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.location_on_rounded, color: Colors.white, size: 24),
+                        ),
+                        const SizedBox(width: 14),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'DRIVER CURRENT LOCATION',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                                color: AdminTheme.crimsonLight,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              driver.name,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: driver.statusColor.withAlpha(30),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: driver.statusColor, width: 1.2),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(width: 8, height: 8, decoration: BoxDecoration(color: driver.statusColor, shape: BoxShape.circle)),
+                          const SizedBox(width: 6),
+                          Text(
+                            driver.statusLabel,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: driver.statusColor,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                const Divider(color: Color(0xFF334155), height: 1),
+                const SizedBox(height: 20),
+
+                // STATE AND PRESENT DISTRICT IN TWO HIGH CONTRAST BOXES
+                Row(
+                  children: [
+                    // STATE BOX
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F172A),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFF334155)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.public, color: Color(0xFF38BDF8), size: 16),
+                                SizedBox(width: 6),
+                                Text(
+                                  'CURRENT STATE',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF94A3B8), letterSpacing: 0.8),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              driver.state,
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'India • Western Logistics Corridor',
+                              style: TextStyle(fontSize: 10.5, color: Color(0xFF64748B)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+
+                    // PRESENT DISTRICT BOX
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F172A),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AdminTheme.crimsonRed.withAlpha(120)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.location_city_rounded, color: AdminTheme.crimsonLight, size: 16),
+                                SizedBox(width: 6),
+                                Text(
+                                  'PRESENT DISTRICT',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AdminTheme.crimsonLight, letterSpacing: 0.8),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              driver.presentDistrict,
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Verified Operational Hub • ${driver.vehicleModel}',
+                              style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // GPS TELEMETRY & COORDINATES
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F172A).withAlpha(150),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF1E293B)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.gps_fixed, size: 14, color: AdminTheme.statusOnline),
+                          const SizedBox(width: 8),
+                          Text(
+                            'GPS: ${driver.location.latitude.toStringAsFixed(5)}° N, ${driver.location.longitude.toStringAsFixed(5)}° E',
+                            style: const TextStyle(
+                              color: Color(0xFFE2E8F0),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                        ],
+                      ),
+                      InkWell(
+                        onTap: () {
+                          Clipboard.setData(ClipboardData(text: '${driver.location.latitude},${driver.location.longitude}'));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Coordinates copied for ${driver.name}'),
+                              backgroundColor: AdminTheme.statusOnline,
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                        child: const Row(
+                          children: [
+                            Icon(Icons.copy, size: 12, color: Color(0xFF94A3B8)),
+                            SizedBox(width: 4),
+                            Text('Copy Pin', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+
+          // 2. TELEMETRICS 4-METRIC GRID
+          Row(
+            children: [
+              Expanded(
+                child: _buildTelemetryStatTile(
+                  icon: Icons.speed,
+                  iconColor: const Color(0xFFF59E0B),
+                  title: 'LIVE SPEED',
+                  value: '${driver.speedKmh.toInt()} km/h',
+                  subtitle: 'Real-time telemetry',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildTelemetryStatTile(
+                  icon: Icons.battery_charging_full,
+                  iconColor: AdminTheme.statusOnline,
+                  title: 'DEVICE BATTERY',
+                  value: '${driver.batteryPercent}%',
+                  subtitle: 'Healthy transceiver',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildTelemetryStatTile(
+                  icon: Icons.timer_outlined,
+                  iconColor: const Color(0xFF38BDF8),
+                  title: 'SHIFT DURATION',
+                  value: driver.onlineDuration,
+                  subtitle: 'Active since check-in',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildTelemetryStatTile(
+                  icon: driver.vehicleIcon,
+                  iconColor: AdminTheme.crimsonLight,
+                  title: 'VEHICLE CLASS',
+                  value: driver.vehicleType.toUpperCase(),
+                  subtitle: driver.plateNumber,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+
+          // 3. ACTIVE TASK OR TRANSIT CORRIDOR
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFF334155)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.assignment_outlined, color: AdminTheme.crimsonLight, size: 20),
+                        SizedBox(width: 10),
+                        Text(
+                          'ACTIVE CONSIGNMENT & CORRIDOR',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.5),
+                        ),
+                      ],
+                    ),
+                    if (driver.currentOrderCode != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AdminTheme.crimsonRed.withAlpha(40),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AdminTheme.crimsonRed),
+                        ),
+                        child: Text(
+                          '#${driver.currentOrderCode}',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AdminTheme.crimsonLight),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                if (driver.currentOrderCode != null) ...[
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(8)),
+                        child: const Icon(Icons.inventory_2_outlined, color: Color(0xFFCBD5E1), size: 18),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('CARGO CLASSIFICATION', style: TextStyle(fontSize: 10, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
+                            Text(
+                              driver.currentCargo ?? 'Packaged Goods & Industrial Electronics',
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F172A),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.circle, size: 10, color: AdminTheme.statusOnline),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'PICKUP: ${driver.pickupAddress ?? "Bhiwandi Warehousing Hub, Gate 4, Thane"}',
+                                style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 12, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4.0),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Container(width: 2, height: 16, color: const Color(0xFF334155)),
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on, size: 12, color: AdminTheme.crimsonRed),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'DROP-OFF: ${driver.dropoffAddress ?? "Ghodbunder Tech Park, Thane West"}',
+                                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F172A),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.check_circle_outline, color: AdminTheme.statusOnline, size: 24),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Driver is currently available for dispatch in ${driver.presentDistrict}, ${driver.state}. Tap "Manual Dispatch" below to allocate a priority order.',
+                            style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 12, height: 1.4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // 4. ACTION CONTROLS
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _showManualDispatchModal(driver),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AdminTheme.crimsonRed,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  icon: const Icon(Icons.send_rounded, size: 18),
+                  label: const Text('MANUAL DISPATCH OVERRIDE', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+                ),
+              ),
+              const SizedBox(width: 14),
+              OutlinedButton.icon(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Calling driver ${driver.name} at ${driver.phone}...'),
+                      backgroundColor: AdminTheme.deepBlack,
+                    ),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Color(0xFF475569)),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                icon: const Icon(Icons.phone, size: 16, color: AdminTheme.statusOnline),
+                label: Text(driver.phone, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTelemetryStatTile({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String value,
+    required String subtitle,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF334155)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: iconColor),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF94A3B8), letterSpacing: 0.6),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoDriverSelectedOverview() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFF334155)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AdminTheme.crimsonRed.withAlpha(30),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.touch_app_rounded, color: AdminTheme.crimsonLight, size: 30),
+                ),
+                const SizedBox(width: 18),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Select a Driver to Inspect Regional Location',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Tap any driver on the left roster to view their live State, Present District, telematics, and active delivery route.',
+                        style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'ACTIVE FLEET REGIONAL DISTRIBUTION',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF94A3B8), letterSpacing: 1.0),
+          ),
+          const SizedBox(height: 12),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _drivers.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final d = _drivers[index];
+              return InkWell(
+                onTap: () => _selectAndCenterDriver(d),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF334155)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(color: d.statusColor, shape: BoxShape.circle),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(d.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                          const SizedBox(width: 8),
+                          Text('(${d.vehicleModel})', style: const TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(6)),
+                            child: Text(d.state, style: const TextStyle(color: Color(0xFF38BDF8), fontWeight: FontWeight.bold, fontSize: 11)),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(6)),
+                            child: Text(d.presentDistrict, style: const TextStyle(color: AdminTheme.crimsonLight, fontWeight: FontWeight.bold, fontSize: 11)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Preserve Fullscreen Mapbox tile engine (toggleable via TILE MAP button)
+  Widget _buildMapTileEnginePane() {
     final tileUrl = _isDarkMap ? AdminConstants.mapboxNavDarkTiles : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
     // 1. Polylines to render
@@ -666,7 +1409,6 @@ class _AdminDashboardShellState extends State<AdminDashboardShell> {
 
     return Stack(
       children: [
-        // FlutterMap Engine with Mapbox / Carto Dark Tiles
         FlutterMap(
           mapController: _mapController,
           options: MapOptions(
@@ -675,22 +1417,15 @@ class _AdminDashboardShellState extends State<AdminDashboardShell> {
             interactionOptions: const InteractionOptions(flags: InteractiveFlag.all),
           ),
           children: [
-            // High-Contrast Base Tile Layer
             TileLayer(
               urlTemplate: tileUrl,
               subdomains: const ['a', 'b', 'c', 'd'],
               userAgentPackageName: 'com.hamha.admin',
             ),
-
-            // Geofence Region Overlays
             if (polygons.isNotEmpty)
               PolygonLayer(polygons: polygons),
-
-            // Active Vehicle Routes Polylines
             if (polylines.isNotEmpty)
               PolylineLayer(polylines: polylines),
-
-            // Driver Vehicle Location Markers
             MarkerLayer(
               markers: _drivers.map((driver) {
                 final isSelected = _selectedDriver?.id == driver.id;
@@ -707,6 +1442,23 @@ class _AdminDashboardShellState extends State<AdminDashboardShell> {
               }).toList(),
             ),
           ],
+        ),
+
+        // Back to Driver Location & District view toggle
+        Positioned(
+          left: 20,
+          bottom: 20,
+          child: ElevatedButton.icon(
+            onPressed: () => setState(() => _showMapTileView = false),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AdminTheme.deepBlack,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: const Icon(Icons.arrow_back, size: 16),
+            label: const Text('BACK TO DRIVER LOCATION VIEW', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
+          ),
         ),
 
         // Floating Driver Telemetry Card (Positioned Top-Left over Map)
@@ -768,6 +1520,7 @@ class _AdminDashboardShellState extends State<AdminDashboardShell> {
         ),
       ],
     );
+  }
   }
 
   void _showManualDispatchModal(FleetDriverModel driver) {

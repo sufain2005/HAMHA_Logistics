@@ -32,7 +32,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> with SingleTick
     _movingTruckController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 4),
-    )..repeat();
+    );
     _loadOrders();
   }
 
@@ -223,22 +223,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> with SingleTick
                         ),
                       ],
                     ),
-                    const SizedBox(width: 14),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: HamhaTheme.deepBlack,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.shield, color: HamhaTheme.crimsonRed, size: 14),
-                          SizedBox(width: 4),
-                          Text('VERIFIED', style: TextStyle(color: HamhaTheme.crispWhite, fontSize: 11, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -397,70 +381,58 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> with SingleTick
           ),
           const SizedBox(height: 10),
 
-          // Animated Highway Track with moving delivery vehicle
+          // Highway Track with static HAMHA 24/7 indicator (Stationary, non-moving)
           SizedBox(
             height: 38,
-            child: AnimatedBuilder(
-              animation: _movingTruckController,
-              builder: (context, child) {
-                return LayoutBuilder(
-                  builder: (context, constraints) {
-                    final maxW = constraints.maxWidth - 44;
-                    final posX = _movingTruckController.value * maxW;
-
-                    return Stack(
-                      alignment: Alignment.centerLeft,
-                      children: [
-                        // Dotted road dashes
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 6,
-                          child: Row(
-                            children: List.generate(
-                              20,
-                              (i) => Expanded(
-                                child: Container(
-                                  height: 2,
-                                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                                  color: (i % 2 == 0) ? Colors.white30 : Colors.transparent,
-                                ),
-                              ),
-                            ),
-                          ),
+            child: Stack(
+              alignment: Alignment.centerLeft,
+              children: [
+                // Dotted road dashes
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 6,
+                  child: Row(
+                    children: List.generate(
+                      20,
+                      (i) => Expanded(
+                        child: Container(
+                          height: 2,
+                          margin: const EdgeInsets.symmetric(horizontal: 2),
+                          color: (i % 2 == 0) ? Colors.white30 : Colors.transparent,
                         ),
+                      ),
+                    ),
+                  ),
+                ),
 
-                        // Moving Transport Van / Truck
-                        Positioned(
-                          left: posX,
-                          bottom: 2,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: HamhaTheme.crimsonRed,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Row(
-                                  children: [
-                                    Icon(Icons.local_shipping, color: Colors.white, size: 14),
-                                    SizedBox(width: 4),
-                                    Text('HAMHA 24/7', style: TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.w900)),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 2),
-                              const Icon(Icons.flash_on, color: Color(0xFFF59E0B), size: 12),
-                            ],
-                          ),
+                // Stationary Transport Van / Truck Badge
+                Positioned(
+                  left: 16,
+                  bottom: 2,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: HamhaTheme.crimsonRed,
+                          borderRadius: BorderRadius.circular(6),
                         ),
-                      ],
-                    );
-                  },
-                );
-              },
+                        child: const Row(
+                          children: [
+                            Icon(Icons.local_shipping, color: Colors.white, size: 14),
+                            SizedBox(width: 4),
+                            Text('HAMHA 24/7', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.flash_on, color: Color(0xFFF59E0B), size: 12),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           const Text(

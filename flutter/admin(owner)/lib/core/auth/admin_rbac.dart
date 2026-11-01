@@ -74,7 +74,7 @@ class AdminUserModel {
   String get scopeTitle {
     switch (scope) {
       case AdminScope.fullAdmin:
-        return 'FLEET OWNER (ROOT)';
+        return 'OWNER';
       case AdminScope.dispatcher:
         return 'FLEET DISPATCHER';
       case AdminScope.support:
